@@ -13,7 +13,7 @@ class User:
 def authenticate(username, password):
     """
     Authenticate the user by checking the credentials in passwords.csv.
-    Returns the role (admin or student) if valid, otherwise None.
+    Returns a User object if valid, otherwise None.
     """
     if not username or not password:
         return None
@@ -34,7 +34,10 @@ def authenticate(username, password):
         # Find the user
         user_row = df[df['username'] == username]
         if not user_row.empty and user_row.iloc[0]['password'] == password:
-            return user_row.iloc[0]['role']  # Return the role (admin or student)
+            # Get user details
+            user_details = get_user_details(username)
+            if user_details:
+                return user_details
             
     except Exception as e:
         print(f"Error during authentication: {e}")
