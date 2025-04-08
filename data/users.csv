@@ -1,3 +1,7 @@
-username,full_name,role
-admin,Admin User,admin
-student1,Sudan Pudasaini,student
+username,full_name,role,email,phone,address,department,year_of_study,enrollment_date
+admin,Admin User,admin,admin@university.edu,1234567890,123 Admin St,Administration,0,2020-01-01
+student1,Sudan Pudasaini,student,sudan@university.edu,9876543210,456 Student Ave,Computer Science,2,2022-09-01
+student2,Rahul Sharma,student,rahul@university.edu,8765432109,789 Student St,Engineering,3,2021-09-01
+student3,Priya Patel,student,priya@university.edu,7654321098,321 Student Rd,Business,1,2023-09-01
+student4,Amit Kumar,student,amit@university.edu,6543210987,654 Student Ln,Science,4,2020-09-01
+123,Nirajan Sah,student,nirajan@university.edu,5432109876,987 Student Blvd,Arts,2,2022-09-01

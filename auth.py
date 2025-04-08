@@ -1,6 +1,12 @@
 import os
 import csv
 import pandas as pd
+import tkinter as tk
+from tkinter import messagebox
+from ui_components import COLORS, FONTS, create_button, create_label, create_entry, create_frame
+from admin_view import AdminView
+from student_view import StudentView
+from user_view import UserView
 
 
 class User:
@@ -11,37 +17,29 @@ class User:
 
 
 def authenticate(username, password):
-    """
-    Authenticate the user by checking the credentials in passwords.csv.
-    Returns a User object if valid, otherwise None.
-    """
-    if not username or not password:
-        return None
-        
+    """Authenticate user credentials"""
     try:
-        # Check if the data directory exists
         if not os.path.exists("data"):
             os.makedirs("data")
             
-        # Check if the passwords file exists
         if not os.path.exists("data/passwords.csv"):
-            print("Error: passwords.csv file not found.")
             return None
             
-        # Read the CSV file
-        df = pd.read_csv("data/passwords.csv")
+        passwords_df = pd.read_csv("data/passwords.csv")
+        user = passwords_df[
+            (passwords_df['username'] == username) & 
+            (passwords_df['password'] == password)
+        ]
         
-        # Find the user
-        user_row = df[df['username'] == username]
-        if not user_row.empty and user_row.iloc[0]['password'] == password:
-            # Get user details
-            user_details = get_user_details(username)
-            if user_details:
-                return user_details
-            
+        if not user.empty:
+            return {
+                'username': user.iloc[0]['username'],
+                'role': user.iloc[0]['role']
+            }
+        return None
     except Exception as e:
-        print(f"Error during authentication: {e}")
-    return None
+        print(f"Authentication error: {str(e)}")
+        return None
 
 
 def get_user_details(username):
@@ -68,108 +66,65 @@ def get_user_details(username):
         # Find the user
         user_row = df[df['username'] == username]
         if not user_row.empty:
-            return User(
-                username=user_row.iloc[0]['username'],
-                full_name=user_row.iloc[0]['full_name'],
-                role=user_row.iloc[0]['role']
-            )
+            return {
+                'username': user_row.iloc[0]['username'],
+                'full_name': user_row.iloc[0]['full_name'],
+                'role': user_row.iloc[0]['role'],
+                'user_id': user_row.iloc[0]['username']  # Using username as user_id for simplicity
+            }
             
     except Exception as e:
         print(f"Error getting user details: {e}")
     return None
 
 
-def add_user(username, full_name, password, role):
-    """
-    Add a new user to users.csv and passwords.csv.
-    """
-    if not username or not full_name or not password or not role:
-        return False
+def login_window():
+    """Create and show login window"""
+    root = tk.Tk()
+    root.title("Student Profile Management System - Login")
+    root.geometry("400x300")
+    
+    main_frame = create_frame(root)
+    main_frame.pack(expand=True, fill='both', padx=20, pady=20)
+    
+    create_label(main_frame, "Login", font=('Arial', 16, 'bold')).pack(pady=10)
+    
+    username_frame = create_frame(main_frame)
+    username_frame.pack(fill='x', pady=5)
+    create_label(username_frame, "Username:").pack(side='left')
+    username_entry = create_entry(username_frame)
+    username_entry.pack(side='right', expand=True, fill='x', padx=5)
+    
+    password_frame = create_frame(main_frame)
+    password_frame.pack(fill='x', pady=5)
+    create_label(password_frame, "Password:").pack(side='left')
+    password_entry = create_entry(password_frame, show="*")
+    password_entry.pack(side='right', expand=True, fill='x', padx=5)
+    
+    def handle_login():
+        username = username_entry.get()
+        password = password_entry.get()
         
-    try:
-        # Check if the data directory exists
-        if not os.path.exists("data"):
-            os.makedirs("data")
+        if not username or not password:
+            messagebox.showerror("Error", "Please enter both username and password")
+            return
             
-        # Check if the users file exists, create it if not
-        if not os.path.exists("data/users.csv"):
-            pd.DataFrame(columns=['username', 'full_name', 'role']).to_csv("data/users.csv", index=False)
-                
-        # Check if the passwords file exists, create it if not
-        if not os.path.exists("data/passwords.csv"):
-            pd.DataFrame(columns=['username', 'password', 'role']).to_csv("data/passwords.csv", index=False)
-                
-        # Check if the username already exists
-        users_df = pd.read_csv("data/users.csv")
-        if not users_df.empty and username in users_df['username'].values:
-            return False  # Username already exists
+        user = authenticate(username, password)
+        if user:
+            root.destroy()
+            if user['role'] == 'admin':
+                AdminView(user)
+            elif user['role'] == 'student':
+                StudentView(user)
+            else:
+                UserView(user)
+        else:
+            messagebox.showerror("Error", "Invalid username or password")
+    
+    create_button(main_frame, "Login", handle_login).pack(pady=20)
+    
+    root.mainloop()
 
-        # Add the user to users.csv
-        new_user = pd.DataFrame({
-            'username': [username],
-            'full_name': [full_name],
-            'role': [role]
-        })
-        users_df = pd.concat([users_df, new_user], ignore_index=True)
-        users_df.to_csv("data/users.csv", index=False)
-
-        # Add the user to passwords.csv
-        passwords_df = pd.read_csv("data/passwords.csv")
-        new_password = pd.DataFrame({
-            'username': [username],
-            'password': [password],
-            'role': [role]
-        })
-        passwords_df = pd.concat([passwords_df, new_password], ignore_index=True)
-        passwords_df.to_csv("data/passwords.csv", index=False)
-
-        return True
-    except Exception as e:
-        print(f"Error adding user: {e}")
-        return False
-
-
-def delete_user(username):
-    """
-    Delete a user from users.csv and passwords.csv.
-    """
-    if not username:
-        return False
-        
-    try:
-        # Check if the data directory exists
-        if not os.path.exists("data"):
-            return False
-            
-        # Check if the users file exists
-        if not os.path.exists("data/users.csv"):
-            return False
-            
-        # Check if the passwords file exists
-        if not os.path.exists("data/passwords.csv"):
-            return False
-            
-        # Remove the user from users.csv
-        users_df = pd.read_csv("data/users.csv")
-        if not users_df.empty:
-            users_df = users_df[users_df['username'] != username]
-            users_df.to_csv("data/users.csv", index=False)
-
-        # Remove the user from passwords.csv
-        passwords_df = pd.read_csv("data/passwords.csv")
-        if not passwords_df.empty:
-            passwords_df = passwords_df[passwords_df['username'] != username]
-            passwords_df.to_csv("data/passwords.csv", index=False)
-
-        return True
-    except Exception as e:
-        print(f"Error deleting user: {e}")
-        return False
-
-'''
-enter and update grades for student
-3 in one class
-'''
 
 def get_student_grades(username):
     """
@@ -186,6 +141,7 @@ def get_student_grades(username):
             
         # Check if the grades file exists
         if not os.path.exists("data/grades.csv"):
+            print("Error: grades.csv file not found.")
             return None
             
         # Read the CSV file
@@ -199,17 +155,17 @@ def get_student_grades(username):
             for i in range(1, 6):  # grade1 to grade5
                 grade_col = f'grade{i}'
                 if grade_col in user_row.columns and pd.notna(user_row[grade_col].iloc[0]):
-                    grades.append(str(user_row[grade_col].iloc[0]))
+                    grades.append({
+                        'subject': f'Subject {i}',
+                        'grade': str(user_row[grade_col].iloc[0]),
+                        'credits': 3  # Assuming 3 credits per subject
+                    })
             return grades
             
     except Exception as e:
         print(f"Error getting student grades: {e}")
     return None
 
-'''
-enter and update eca for student
-3 in one
-'''
 
 def get_student_eca(username):
     """
@@ -226,6 +182,7 @@ def get_student_eca(username):
             
         # Check if the eca file exists
         if not os.path.exists("data/eca.csv"):
+            print("Error: eca.csv file not found.")
             return None
             
         # Read the CSV file
@@ -239,7 +196,10 @@ def get_student_eca(username):
             for i in range(1, 4):  # activity1 to activity3
                 activity_col = f'activity{i}'
                 if activity_col in user_row.columns and pd.notna(user_row[activity_col].iloc[0]):
-                    activities.append(user_row[activity_col].iloc[0])
+                    activities.append({
+                        'activity': user_row[activity_col].iloc[0],
+                        'hours': 10  # Assuming 10 hours per activity
+                    })
             return activities
             
     except Exception as e:
@@ -278,3 +238,7 @@ def update_student_profile(username, full_name):
     except Exception as e:
         print(f"Error updating student profile: {e}")
         return False
+
+
+if __name__ == "__main__":
+    login_window()

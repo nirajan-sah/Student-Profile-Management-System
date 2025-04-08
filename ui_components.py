@@ -3,84 +3,89 @@ from tkinter import ttk
 
 # Color scheme
 COLORS = {
-    "primary": "#4a90e2",
-    "secondary": "#50e3c2",
-    "success": "#5cb85c",
-    "danger": "#d9534f",
-    "warning": "#f0ad4e",
-    "light": "#f8f9fa",
-    "dark": "#343a40"
+    'primary': '#007bff',
+    'secondary': '#6c757d',
+    'success': '#28a745',
+    'danger': '#dc3545',
+    'warning': '#ffc107',
+    'info': '#17a2b8',
+    'light': '#f8f9fa',
+    'dark': '#343a40'
 }
 
 # Font styles
 FONTS = {
-    "heading": ("Helvetica", 24, "bold"),
-    "subheading": ("Helvetica", 18, "bold"),
-    "normal": ("Helvetica", 12),
-    "small": ("Helvetica", 10)
+    'title': ('Arial', 16, 'bold'),
+    'subtitle': ('Arial', 14, 'bold'),
+    'normal': ('Arial', 12),
+    'small': ('Arial', 10)
 }
 
-def create_styled_button(parent, text, command, bg_color=COLORS["primary"]):
-    """
-    Create a styled button with consistent appearance.
-    """
-    button = tk.Button(
+def create_button(parent, text, command):
+    """Create a styled button"""
+    btn = tk.Button(
         parent,
         text=text,
         command=command,
-        bg=bg_color,
-        fg="white",
-        font=FONTS["normal"],
+        bg=COLORS['primary'],
+        fg='white',
+        font=FONTS['normal'],
         relief=tk.FLAT,
-        padx=20,
-        pady=10
+        padx=10,
+        pady=5
     )
-    button.bind("<Enter>", lambda e: button.config(bg=adjust_color(bg_color, -20)))
-    button.bind("<Leave>", lambda e: button.config(bg=bg_color))
-    return button
+    
+    def on_enter(e):
+        btn['bg'] = adjust_color(COLORS['primary'], -20)
+        
+    def on_leave(e):
+        btn['bg'] = COLORS['primary']
+        
+    btn.bind('<Enter>', on_enter)
+    btn.bind('<Leave>', on_leave)
+    
+    return btn
 
-def create_styled_label(parent, text, font=FONTS["normal"], fg=COLORS["dark"]):
-    """
-    Create a styled label with consistent appearance.
-    """
+def create_label(parent, text, font=None):
+    """Create a styled label"""
     return tk.Label(
         parent,
         text=text,
-        font=font,
-        fg=fg,
-        bg=COLORS["light"]
+        font=font or FONTS['normal'],
+        bg='white'
     )
 
-def create_styled_entry(parent, show=None):
-    """
-    Create a styled entry field with consistent appearance.
-    """
+def create_entry(parent, show=None):
+    """Create a styled entry field"""
     return tk.Entry(
         parent,
-        font=FONTS["normal"],
+        show=show,
+        font=FONTS['normal'],
         relief=tk.SOLID,
-        borderwidth=1,
-        show=show
+        borderwidth=1
     )
 
-def create_styled_frame(parent, bg=COLORS["light"]):
-    """
-    Create a styled frame with consistent appearance.
-    """
+def create_frame(parent):
+    """Create a styled frame"""
     return tk.Frame(
         parent,
-        bg=bg,
-        padx=20,
-        pady=20
+        bg='white'
+    )
+
+def create_combobox(parent, values):
+    """Create a styled combobox"""
+    return ttk.Combobox(
+        parent,
+        values=values,
+        font=FONTS['normal']
     )
 
 def adjust_color(color, amount):
-    """
-    Adjust the brightness of a color by the given amount.
-    """
+    """Adjust color brightness"""
     # Convert hex to RGB
-    color = color.lstrip('#')
-    r, g, b = tuple(int(color[i:i+2], 16) for i in (0, 2, 4))
+    r = int(color[1:3], 16)
+    g = int(color[3:5], 16)
+    b = int(color[5:7], 16)
     
     # Adjust each component
     r = max(0, min(255, r + amount))
@@ -88,24 +93,4 @@ def adjust_color(color, amount):
     b = max(0, min(255, b + amount))
     
     # Convert back to hex
-    return f'#{r:02x}{g:02x}{b:02x}'
-
-def create_styled_combobox(parent, values):
-    """
-    Create a styled combobox with consistent appearance.
-    """
-    style = ttk.Style()
-    style.configure(
-        "Custom.TCombobox",
-        fieldbackground=COLORS["light"],
-        background=COLORS["light"],
-        arrowcolor=COLORS["dark"]
-    )
-    
-    combo = ttk.Combobox(
-        parent,
-        values=values,
-        style="Custom.TCombobox",
-        font=FONTS["normal"]
-    )
-    return combo 
+    return f'#{r:02x}{g:02x}{b:02x}' 
