@@ -220,7 +220,7 @@ class StudentView:
         gpa = self.analytics.calculate_gpa(self.username)
         grade_stats = self.analytics.get_grade_statistics(self.username)
         eca_summary = self.analytics.get_eca_summary(self.username)
-        progress = self.analytics.get_progress_towards_graduation(self.username)
+        
         
         # Display statistics
         stats_text = f"""Performance Summary
@@ -245,13 +245,6 @@ Total Hours per Week: {eca_summary['total_hours']}
 
 """
         
-        if progress:
-            stats_text += f"""Progress Towards Graduation:
-Completed Credits: {progress['completed_credits']}
-Total Credits Needed: {progress['total_credits_needed']}
-Completion: {progress['completion_percentage']}%
-Remaining Credits: {progress['remaining_credits']}
-"""
         
         self.stats_display.insert(tk.END, stats_text)
         

@@ -2,7 +2,6 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import os
 import numpy as np
-from datetime import datetime
 
 class StudentAnalytics:
     """Class for handling student analytics and visualizations"""
@@ -34,9 +33,6 @@ class StudentAnalytics:
         except Exception as e:
             print(f"Error cleaning up charts: {e}")
     
-    def _get_timestamp(self):
-        """Get current timestamp for file naming"""
-        return datetime.now().strftime("%Y%m%d_%H%M%S")
     
     def create_grades_chart(self, grades, username):
         """Create a bar chart for student grades"""
@@ -76,7 +72,7 @@ class StudentAnalytics:
             plt.tight_layout()
             
             # Save the chart
-            filename = f"grades_{username}_{self._get_timestamp()}.png"
+            filename = f"grades_{username}.png"
             filepath = os.path.join(self.charts_dir, filename)
             plt.savefig(filepath)
             plt.close()
@@ -117,7 +113,7 @@ class StudentAnalytics:
             plt.tight_layout()
             
             # Save the chart
-            filename = f"eca_{username}_{self._get_timestamp()}.png"
+            filename = f"eca_{username}.png"
             filepath = os.path.join(self.charts_dir, filename)
             plt.savefig(filepath, bbox_inches='tight')
             plt.close()
@@ -174,7 +170,7 @@ class StudentAnalytics:
             plt.tight_layout()
             
             # Save the chart
-            filename = f"summary_{username}_{self._get_timestamp()}.png"
+            filename = f"summary_{username}.png"
             filepath = os.path.join(self.charts_dir, filename)
             plt.savefig(filepath)
             plt.close()
@@ -336,7 +332,7 @@ class StudentAnalytics:
             plt.title('Overall Grade Distribution')
             plt.grid(True, alpha=0.3)
             
-            filename = f"overall_grades_{self._get_timestamp()}.png"
+            filename = f"overall_grades.png"
             filepath = os.path.join(self.charts_dir, filename)
             plt.savefig(filepath)
             plt.close()
@@ -368,7 +364,7 @@ class StudentAnalytics:
             plt.xticks(rotation=45)
             plt.grid(True, alpha=0.3)
             
-            filename = f"subject_comparison_{self._get_timestamp()}.png"
+            filename = f"subject_comparison.png"
             filepath = os.path.join(self.charts_dir, filename)
             plt.savefig(filepath)
             plt.close()
@@ -391,7 +387,7 @@ class StudentAnalytics:
             plt.pie(activity_counts, labels=activity_counts.index, autopct='%1.1f%%')
             plt.title('Distribution of Extracurricular Activities')
             
-            filename = f"eca_distribution_{self._get_timestamp()}.png"
+            filename = f"eca_distribution.png"
             filepath = os.path.join(self.charts_dir, filename)
             plt.savefig(filepath)
             plt.close()
@@ -417,7 +413,7 @@ class StudentAnalytics:
             plt.title('Distribution of ECA Hours per Week')
             plt.grid(True, alpha=0.3)
             
-            filename = f"hours_distribution_{self._get_timestamp()}.png"
+            filename = f"hours_distribution.png"
             filepath = os.path.join(self.charts_dir, filename)
             plt.savefig(filepath)
             plt.close()
