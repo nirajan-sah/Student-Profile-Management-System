@@ -2,24 +2,28 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 from student import get_student_grades, get_student_eca, update_student_profile
 from auth import get_user_details
+from mat import StudentAnalytics
+from PIL import Image, ImageTk
+import os
 
 
 class StudentView:
     def __init__(self, username, parent=None):
         self.username = username
         self.user_details = get_user_details(username)
+        self.analytics = StudentAnalytics()
         
         # Create main window
         self.root = tk.Toplevel(parent) if parent else tk.Tk()
         self.root.title(f"Student View - {self.user_details['full_name']}")
-        self.root.geometry("600x400")
+        self.root.geometry("800x600")  # Increased size for charts
         
         # Center the window
         screen_width = self.root.winfo_screenwidth()
         screen_height = self.root.winfo_screenheight()
-        x = (screen_width - 600) // 2
-        y = (screen_height - 400) // 2
-        self.root.geometry(f"600x400+{x}+{y}")
+        x = (screen_width - 800) // 2
+        y = (screen_height - 600) // 2
+        self.root.geometry(f"800x600+{x}+{y}")
         
         self.create_widgets()
         
@@ -45,6 +49,11 @@ class StudentView:
         eca_frame = ttk.Frame(notebook, padding="10")
         notebook.add(eca_frame, text="ECA")
         self.setup_eca_tab(eca_frame)
+        
+        # Analytics tab
+        analytics_frame = ttk.Frame(notebook, padding="10")
+        notebook.add(analytics_frame, text="Analytics")
+        self.setup_analytics_tab(analytics_frame)
         
         # Logout button
         logout_btn = ttk.Button(self.root, text="Logout", command=self.logout)
@@ -125,6 +134,27 @@ class StudentView:
         # Load ECA
         self.load_eca()
         
+    def setup_analytics_tab(self, parent):
+        """Setup the analytics tab with performance charts and statistics"""
+        # Create left frame for statistics
+        stats_frame = ttk.LabelFrame(parent, text="Performance Statistics", padding="10")
+        stats_frame.pack(side='left', fill='y', padx=5)
+        
+        # Create statistics display
+        self.stats_display = tk.Text(stats_frame, width=40, height=20, wrap=tk.WORD)
+        self.stats_display.pack(fill='both', expand=True)
+        
+        # Create right frame for charts
+        charts_frame = ttk.LabelFrame(parent, text="Performance Charts", padding="10")
+        charts_frame.pack(side='right', fill='both', expand=True, padx=5)
+        
+        # Create canvas for charts
+        self.chart_canvas = tk.Canvas(charts_frame, width=400, height=400)
+        self.chart_canvas.pack(fill='both', expand=True)
+        
+        # Load analytics
+        self.load_analytics()
+    
     def load_grades(self):
         # Clear existing items
         for item in self.grades_tree.get_children():
@@ -173,6 +203,92 @@ class StudentView:
         else:
             messagebox.showerror("Error", "Failed to update profile")
             
+    def load_analytics(self):
+        """Load and display analytics data"""
+        # Clear previous data
+        self.stats_display.delete('1.0', tk.END)
+        
+        # Get data
+        grades = get_student_grades(self.username)
+        eca = get_student_eca(self.username)
+        
+        if not grades and not eca:
+            self.stats_display.insert(tk.END, "No data available.")
+            return
+        
+        # Calculate statistics
+        gpa = self.analytics.calculate_gpa(self.username)
+        grade_stats = self.analytics.get_grade_statistics(self.username)
+        eca_summary = self.analytics.get_eca_summary(self.username)
+        progress = self.analytics.get_progress_towards_graduation(self.username)
+        
+        # Display statistics
+        stats_text = f"""Performance Summary
+
+GPA: {gpa if gpa else 'N/A'}
+
+"""
+        if grade_stats:
+            stats_text += f"""Grade Statistics:
+Mean: {grade_stats['mean']}
+Median: {grade_stats['median']}
+Minimum: {grade_stats['min']}
+Maximum: {grade_stats['max']}
+Standard Deviation: {grade_stats['std_dev']}
+
+"""
+        
+        if eca_summary:
+            stats_text += f"""Extracurricular Activities:
+Total Activities: {eca_summary['total_activities']}
+Total Hours per Week: {eca_summary['total_hours']}
+
+"""
+        
+        if progress:
+            stats_text += f"""Progress Towards Graduation:
+Completed Credits: {progress['completed_credits']}
+Total Credits Needed: {progress['total_credits_needed']}
+Completion: {progress['completion_percentage']}%
+Remaining Credits: {progress['remaining_credits']}
+"""
+        
+        self.stats_display.insert(tk.END, stats_text)
+        
+        # Create and display chart
+        if grades and eca:
+            chart_path = self.analytics.create_performance_summary(grades, eca, self.username)
+        elif grades:
+            chart_path = self.analytics.create_grades_chart(grades, self.username)
+        elif eca:
+            chart_path = self.analytics.create_eca_chart(eca, self.username)
+        else:
+            return
+            
+        self._display_chart(chart_path)
+    
+    def _display_chart(self, chart_path):
+        """Display a chart in the canvas"""
+        if not chart_path or not os.path.exists(chart_path):
+            # Clear the canvas if no chart is available
+            self.chart_canvas.delete("all")
+            return
+            
+        try:
+            # Load and resize the chart
+            image = Image.open(chart_path)
+            image = image.resize((400, 400), Image.Resampling.LANCZOS)
+            photo = ImageTk.PhotoImage(image)
+            
+            # Update canvas
+            self.chart_canvas.delete("all")  # Clear previous content
+            self.chart_canvas.create_image(0, 0, anchor='nw', image=photo)
+            self.chart_canvas.image = photo  # Keep a reference
+            
+        except Exception as e:
+            print(f"Error displaying chart: {e}")
+            self.chart_canvas.delete("all")  # Clear canvas on error
+    
     def logout(self):
         if messagebox.askyesno("Logout", "Are you sure you want to logout?"):
             if isinstance(self.root, tk.Toplevel):

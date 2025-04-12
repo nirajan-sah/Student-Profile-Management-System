@@ -1,6 +1,5 @@
 import os
 import pandas as pd
-from student import get_student_grades, get_student_eca, update_student_profile
 
 
 def authenticate(username, password):

@@ -1,116 +1,130 @@
 import pandas as pd
 import os
+import csv
 from datetime import datetime
 
-def add_user(username, full_name, password, role, email='', phone='', address='', department='', level=''):
-    """Add a new user to the system."""
-    try:          
-        # Add to passwords.csv
+def add_user(username, full_name, password, role, email=None, phone=None, address=None, department=None, level=None):
+    """Add a new user to the system"""
+    try:
+        # Input validation
+        if not username or not full_name or not password or not role:
+            return False, "Username, full name, password, and role are required"
+        
+        if role not in ['admin', 'student']:
+            return False, "Role must be either 'admin' or 'student'"
+        
+        # Create data directory if it doesn't exist
+        if not os.path.exists("data"):
+            os.makedirs("data")
+        
+        # Check if username already exists
+        if os.path.exists("data/passwords.csv"):
+            passwords_df = pd.read_csv("data/passwords.csv")
+            if username in passwords_df['username'].values:
+                return False, "Username already exists"
+        
+        # Add user to passwords.csv
         if not os.path.exists("data/passwords.csv"):
-            pd.DataFrame(columns=['username', 'password', 'role']).to_csv("data/passwords.csv", index=False)
-            
-        passwords_df = pd.read_csv("data/passwords.csv")
-        if username in passwords_df['username'].values:
-            print("Error: Username already exists")
-            return False
-            
-        new_password = pd.DataFrame({
-            'username': [username],
-            'password': [password],
-            'role': [role]
-        })
-        passwords_df = pd.concat([passwords_df, new_password], ignore_index=True)
-        passwords_df.to_csv("data/passwords.csv", index=False)
+            with open("data/passwords.csv", 'w', newline='') as f:
+                writer = csv.writer(f)
+                writer.writerow(['username', 'password', 'role'])
         
-        # Add to users.csv
+        with open("data/passwords.csv", 'a', newline='') as f:
+            writer = csv.writer(f)
+            writer.writerow([username, password, role])
+        
+        # Add user to users.csv
         if not os.path.exists("data/users.csv"):
-            pd.DataFrame(columns=['username', 'full_name', 'role', 'email', 'phone', 'address', 
-                                'department', 'level']).to_csv("data/users.csv", index=False)
-            
-        users_df = pd.read_csv("data/users.csv")
-        new_user = pd.DataFrame({
-            'username': [username],
-            'full_name': [full_name],
-            'role': [role],
-            'email': [email],
-            'phone': [phone],
-            'address': [address],
-            'department': [department],
-            'level': [level]
-        })
-        users_df = pd.concat([users_df, new_user], ignore_index=True)
-        users_df.to_csv("data/users.csv", index=False)
+            with open("data/users.csv", 'w', newline='') as f:
+                writer = csv.writer(f)
+                writer.writerow(['username', 'full_name', 'email', 'phone', 'address', 'department', 'level', 'created_at'])
         
-        return True
+        with open("data/users.csv", 'a', newline='') as f:
+            writer = csv.writer(f)
+            writer.writerow([username, full_name, email, phone, address, department, level, datetime.now()])
         
+        return True, "User added successfully"
     except Exception as e:
-        print(f"Error adding user: {e}")
-        return False
+        return False, f"Error adding user: {str(e)}"
 
 def remove_user(username):
-    """Remove a user from the system."""
+    """Remove a user from the system"""
     try:
-        if not os.path.exists("data"):
-            return False
-            
+        # Input validation
+        if not username:
+            return False, "Username is required"
+        
+        # Check if user exists
+        if not os.path.exists("data/users.csv"):
+            return False, "User database not found"
+        
+        users_df = pd.read_csv("data/users.csv")
+        if username not in users_df['username'].values:
+            return False, "User not found"
+        
         # Remove from passwords.csv
         if os.path.exists("data/passwords.csv"):
             passwords_df = pd.read_csv("data/passwords.csv")
             passwords_df = passwords_df[passwords_df['username'] != username]
             passwords_df.to_csv("data/passwords.csv", index=False)
-            
+        
         # Remove from users.csv
-        if os.path.exists("data/users.csv"):
-            users_df = pd.read_csv("data/users.csv")
-            users_df = users_df[users_df['username'] != username]
-            users_df.to_csv("data/users.csv", index=False)
-            
+        users_df = users_df[users_df['username'] != username]
+        users_df.to_csv("data/users.csv", index=False)
+        
         # Remove from grades.csv
         if os.path.exists("data/grades.csv"):
             grades_df = pd.read_csv("data/grades.csv")
             grades_df = grades_df[grades_df['username'] != username]
             grades_df.to_csv("data/grades.csv", index=False)
-            
+        
         # Remove from eca.csv
         if os.path.exists("data/eca.csv"):
             eca_df = pd.read_csv("data/eca.csv")
             eca_df = eca_df[eca_df['username'] != username]
             eca_df.to_csv("data/eca.csv", index=False)
-            
-        return True
         
+        return True, "User removed successfully"
     except Exception as e:
-        print(f"Error removing user: {e}")
-        return False
+        return False, f"Error removing user: {str(e)}"
 
 def list_all_users():
-    """List all users in the system."""
+    """List all users in the system"""
     try:
         if not os.path.exists("data/users.csv"):
             return []
-            
-        users_df = pd.read_csv("data/users.csv")
-        return users_df.to_dict('records')
         
+        users_df = pd.read_csv("data/users.csv")
+        if users_df.empty:
+            return []
+            
+        return users_df.to_dict('records')
     except Exception as e:
-        print(f"Error listing users: {e}")
+        print(f"Error listing users: {str(e)}")
         return []
 
 def get_user_details(username):
-    """Get detailed information about a specific user."""
+    """Get detailed information about a user"""
     try:
+        # Input validation
+        if not username:
+            return None
+        
         if not os.path.exists("data/users.csv"):
             return None
-            
+        
         users_df = pd.read_csv("data/users.csv")
+        if users_df.empty:
+            return None
+            
         user = users_df[users_df['username'] == username]
         
-        if not user.empty:
-            return user.iloc[0].to_dict()
-        return None
+        if user.empty:
+            return None
         
+        return user.iloc[0].to_dict()
     except Exception as e:
-        print(f"Error getting user details: {e}")
+        print(f"Error getting user details: {str(e)}")
         return None
 
 def update_user(username, data):
@@ -215,7 +229,9 @@ def update_student_grades(username, grades_data):
             os.makedirs('data')
             
         if not os.path.exists('data/grades.csv'):
-            pd.DataFrame(columns=['username', 'subject', 'grade']).to_csv('data/grades.csv', index=False)
+            # Create with username column and subject columns
+            columns = ['username', 'Physics', 'Math', 'Chemistry', 'Biology', 'English']
+            pd.DataFrame(columns=columns).to_csv('data/grades.csv', index=False)
             
         # Validate student exists
         if not os.path.exists('data/users.csv'):
@@ -227,31 +243,54 @@ def update_student_grades(username, grades_data):
             
         grades_df = pd.read_csv('data/grades.csv')
         
-        # Remove existing grades for this student
-        grades_df = grades_df[grades_df['username'] != username]
-        
-        # Validate and create new grades
-        new_grades = []
-        for subject, data in grades_data.items():
-            try:
-                grade = float(data.get('grade', 0))
-                if not (0 <= grade <= 100):
-                    return False, f"Invalid grade for {subject}: must be between 0 and 100"
+        # Check if student already exists in the grades file
+        if username in grades_df['username'].values:
+            # Update grades for the existing student
+            for subject, data in grades_data.items():
+                try:
+                    grade = float(data.get('grade', 0))
+                    if not (0 <= grade <= 100):
+                        return False, f"Invalid grade for {subject}: must be between 0 and 100"
                     
-                new_grades.append({
-                    'username': username,
-                    'subject': subject,
-                    'grade': grade
-                })
-                
-            except (ValueError, TypeError) as e:
-                return False, f"Invalid data for {subject}: {str(e)}"
-                
-        # Create new grades DataFrame
-        new_grades_df = pd.DataFrame(new_grades)
+                    # Check if the subject column exists, if not add it
+                    if subject not in grades_df.columns:
+                        grades_df[subject] = None
+                    
+                    # Update the grade
+                    grades_df.loc[grades_df['username'] == username, subject] = grade
+                    
+                except (ValueError, TypeError) as e:
+                    return False, f"Invalid data for {subject}: {str(e)}"
+        else:
+            # Add a new row for the student
+            new_row = pd.DataFrame({'username': [username]})
+            
+            # Set all subject columns to None initially
+            for col in grades_df.columns:
+                if col != 'username':
+                    new_row[col] = None
+            
+            # Add the new row to the dataframe
+            grades_df = pd.concat([grades_df, new_row], ignore_index=True)
+            
+            # Update grades for the new student
+            for subject, data in grades_data.items():
+                try:
+                    grade = float(data.get('grade', 0))
+                    if not (0 <= grade <= 100):
+                        return False, f"Invalid grade for {subject}: must be between 0 and 100"
+                    
+                    # Check if the subject column exists, if not add it
+                    if subject not in grades_df.columns:
+                        grades_df[subject] = None
+                    
+                    # Update the grade
+                    grades_df.loc[grades_df['username'] == username, subject] = grade
+                    
+                except (ValueError, TypeError) as e:
+                    return False, f"Invalid data for {subject}: {str(e)}"
         
-        # Concatenate and save
-        grades_df = pd.concat([grades_df, new_grades_df], ignore_index=True)
+        # Save to CSV
         grades_df.to_csv('data/grades.csv', index=False)
         return True, "Grades updated successfully"
         
@@ -320,8 +359,24 @@ def get_student_details(username):
         # Get grades if they exist
         if os.path.exists('data/grades.csv'):
             grades_df = pd.read_csv('data/grades.csv')
-            student_grades = grades_df[grades_df['username'] == username]
-            student_data['grades'] = student_grades.to_dict('records')
+            
+            # Check if the student exists in the grades file
+            if username in grades_df['username'].values:
+                # Get the student's row
+                student_row = grades_df[grades_df['username'] == username].iloc[0]
+                
+                # Convert to the expected format (list of dictionaries with subject and grade)
+                grades = []
+                for column in grades_df.columns:
+                    if column != 'username':  # Skip the username column
+                        grade_value = student_row[column]
+                        if pd.notna(grade_value):  # Check if the grade is not NaN
+                            grades.append({
+                                'subject': column,
+                                'grade': float(grade_value)
+                            })
+                
+                student_data['grades'] = grades
             
         # Get ECA if they exist
         if os.path.exists('data/eca.csv'):

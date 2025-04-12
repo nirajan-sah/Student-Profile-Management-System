@@ -50,11 +50,27 @@ def get_student_grades(username):
             return None
             
         df = pd.read_csv("data/grades.csv")
-        user_grades = df[df['username'] == username]
         
-        if not user_grades.empty:
-            return user_grades.to_dict('records')
-        return []
+        # Check if the student exists in the grades file
+        if username not in df['username'].values:
+            print(f"Student with username '{username}' not found in grades.csv")
+            return []
+            
+        # Get the student's row
+        student_row = df[df['username'] == username].iloc[0]
+        
+        # Convert to the expected format (list of dictionaries with subject and grade)
+        grades = []
+        for column in df.columns:
+            if column != 'username':  # Skip the username column
+                grade_value = student_row[column]
+                if pd.notna(grade_value):  # Check if the grade is not NaN
+                    grades.append({
+                        'subject': column,
+                        'grade': float(grade_value)
+                    })
+        
+        return grades
             
     except Exception as e:
         print(f"Error getting student grades: {e}")
@@ -116,7 +132,8 @@ def get_student_progress(username):
             
         # Calculate progress based on completed credits
         total_credits = 120  # Assuming 120 credits for graduation
-        completed_credits = len(get_student_grades(username)) * 3  # 3 credits per course
+        grades = get_student_grades(username)
+        completed_credits = len(grades) * 3  # 3 credits per course
         
         progress = {
             'completed_credits': completed_credits,
@@ -212,29 +229,32 @@ def add_student_grade(username, subject, grade):
             
         # Create grades.csv if it doesn't exist
         if not os.path.exists("data/grades.csv"):
-            pd.DataFrame(columns=['username', 'subject', 'grade']).to_csv("data/grades.csv", index=False)
+            # Create with username column and subject columns
+            columns = ['username', 'Physics', 'Math', 'Chemistry', 'Biology', 'English']
+            pd.DataFrame(columns=columns).to_csv("data/grades.csv", index=False)
             
         # Read existing grades
         df = pd.read_csv("data/grades.csv")
         
-        # Check if grade already exists for this subject
-        existing_grade = df[
-            (df['username'] == username) & 
-            (df['subject'] == subject)
-        ]
-        
-        if not existing_grade.empty:
-            # Update existing grade instead of creating a new one
-            df.loc[(df['username'] == username) & (df['subject'] == subject), 'grade'] = grade
+        # Check if the subject column exists, if not add it
+        if subject not in df.columns:
+            df[subject] = None
+            
+        # Check if student already exists in the grades file
+        if username in df['username'].values:
+            # Update the grade for the existing student
+            df.loc[df['username'] == username, subject] = grade
         else:
-            # Create new grade entry
-            new_grade = pd.DataFrame({
-                'username': [username],
-                'subject': [subject],
-                'grade': [grade]
-            })
-            # Add new grade to dataframe
-            df = pd.concat([df, new_grade], ignore_index=True)
+            # Add a new row for the student
+            new_row = pd.DataFrame({'username': [username]})
+            # Set all subject columns to None initially
+            for col in df.columns:
+                if col != 'username':
+                    new_row[col] = None
+            # Set the grade for the specified subject
+            new_row[subject] = grade
+            # Append the new row to the dataframe
+            df = pd.concat([df, new_row], ignore_index=True)
         
         # Save to CSV
         df.to_csv("data/grades.csv", index=False)

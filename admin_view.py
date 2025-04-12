@@ -2,12 +2,7 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 from admin import add_user, remove_user, list_all_users, get_user_details
 from student import add_student_grade, add_student_eca, get_student_grades, get_student_eca
-from mat import (
-    create_grades_chart, create_eca_chart, create_performance_summary,
-    calculate_gpa, get_grade_statistics, get_eca_summary, get_progress_towards_graduation,
-    create_overall_grades_distribution, create_subject_performance_comparison,
-    create_eca_distribution, create_hours_distribution, get_overall_statistics
-)
+from mat import StudentAnalytics
 from PIL import Image, ImageTk
 import os
 
@@ -26,7 +21,10 @@ class AdminView:
         # Create the main window
         self.root = tk.Toplevel(parent) if parent else tk.Tk()
         self.root.title("Admin Dashboard")
-        self.root.geometry("800x600")
+        self.root.geometry("1000x800")
+        
+        # Initialize analytics
+        self.analytics = StudentAnalytics()
         
         # Center the window on screen
         self._center_window()
@@ -42,9 +40,9 @@ class AdminView:
         """Center the window on the screen"""
         screen_width = self.root.winfo_screenwidth()
         screen_height = self.root.winfo_screenheight()
-        x = (screen_width - 800) // 2
-        y = (screen_height - 600) // 2
-        self.root.geometry(f"800x600+{x}+{y}")
+        x = (screen_width - 1000) // 2
+        y = (screen_height - 800) // 2
+        self.root.geometry(f"1000x800+{x}+{y}")
     
     def _create_interface(self):
         """Create the main interface with all tabs"""
@@ -131,7 +129,6 @@ class AdminView:
             ('username', 'Username:'),
             ('full_name', 'Full Name:'),
             ('password', 'Password:', True),  # True indicates password field
-            ('role', 'Role (admin/student):'),
             ('email', 'Email:'),
             ('phone', 'Phone:'),
             ('address', 'Address:'),
@@ -150,6 +147,18 @@ class AdminView:
             self.user_form_vars[field] = var
             entry = ttk.Entry(form, textvariable=var, show="*" if args and args[0] else "")
             entry.grid(row=i, column=1, sticky='ew', padx=5, pady=2)
+        
+        # Add role dropdown separately
+        ttk.Label(form, text="Role:").grid(row=len(fields), column=0, sticky='w', pady=2)
+        self.user_form_vars['role'] = tk.StringVar(value='student')  # Default to student
+        role_dropdown = ttk.Combobox(
+            form, 
+            textvariable=self.user_form_vars['role'],
+            values=['admin', 'student'],
+            state='readonly',
+            width=17
+        )
+        role_dropdown.grid(row=len(fields), column=1, sticky='ew', padx=5, pady=2)
         
         # Add submit button
         ttk.Button(parent, text="Add User", command=self._add_user).pack(pady=10)
@@ -172,7 +181,6 @@ class AdminView:
         # Define form fields
         fields = [
             ('username', 'Student Username:'),
-            ('subject', 'Subject:'),
             ('grade', 'Grade (0-100):')
         ]
         
@@ -187,6 +195,18 @@ class AdminView:
             self.grade_form_vars[field] = var
             entry = ttk.Entry(form, textvariable=var)
             entry.grid(row=i, column=1, sticky='ew', padx=5, pady=2)
+        
+        # Add subject dropdown
+        ttk.Label(form, text="Subject:").grid(row=len(fields), column=0, sticky='w', pady=2)
+        self.grade_form_vars['subject'] = tk.StringVar(value='Physics')  # Default to Physics
+        subject_dropdown = ttk.Combobox(
+            form, 
+            textvariable=self.grade_form_vars['subject'],
+            values=['Physics', 'Math', 'Chemistry', 'Biology', 'English'],
+            state='readonly',
+            width=17
+        )
+        subject_dropdown.grid(row=len(fields), column=1, sticky='ew', padx=5, pady=2)
         
         # Add submit button
         ttk.Button(parent, text="Add Grade", command=self._add_grade).pack(pady=10)
@@ -388,9 +408,9 @@ class AdminView:
             return
         
         # Calculate statistics
-        gpa = calculate_gpa(username)
-        grade_stats = get_grade_statistics(username)
-        eca_summary = get_eca_summary(username)
+        gpa = self.analytics.calculate_gpa(username)
+        grade_stats = self.analytics.get_grade_statistics(username)
+        eca_summary = self.analytics.get_eca_summary(username)
         
         # Display statistics
         stats_text = f"""Student: {username}
@@ -418,11 +438,11 @@ Total Hours per Week: {eca_summary['total_hours']}
         
         # Create and display charts
         if grades and eca:
-            chart_path = create_performance_summary(grades, eca)
+            chart_path = self.analytics.create_performance_summary(grades, eca, username)
         elif grades:
-            chart_path = create_grades_chart(grades)
+            chart_path = self.analytics.create_grades_chart(grades, username)
         elif eca:
-            chart_path = create_eca_chart(eca)
+            chart_path = self.analytics.create_eca_chart(eca, username)
         else:
             return
         
@@ -431,7 +451,7 @@ Total Hours per Week: {eca_summary['total_hours']}
     def _refresh_overall_stats(self):
         """Refresh the overall statistics and charts"""
         # Get statistics
-        stats = get_overall_statistics()
+        stats = self.analytics.get_overall_statistics()
         if not stats:
             self.overall_stats_display.delete('1.0', tk.END)
             self.overall_stats_display.insert(tk.END, "No data available.")
@@ -459,25 +479,32 @@ Unique Subjects: {stats['unique_subjects']}
         self.overall_stats_display.insert(tk.END, stats_text)
         
         # Create and display charts
-        self._display_chart(self.grades_chart, create_overall_grades_distribution())
-        self._display_chart(self.subjects_chart, create_subject_performance_comparison())
-        self._display_chart(self.eca_chart, create_eca_distribution())
-        self._display_chart(self.hours_chart, create_hours_distribution())
+        self._display_chart(self.grades_chart, self.analytics.create_overall_grades_distribution())
+        self._display_chart(self.subjects_chart, self.analytics.create_subject_performance_comparison())
+        self._display_chart(self.eca_chart, self.analytics.create_eca_distribution())
+        self._display_chart(self.hours_chart, self.analytics.create_hours_distribution())
     
     def _display_chart(self, canvas, chart_path):
         """Display a chart in the given canvas"""
         if not chart_path or not os.path.exists(chart_path):
+            # Clear the canvas if no chart is available
+            canvas.delete("all")
             return
         
-        # Load and display the chart
-        image = Image.open(chart_path)
-        image = image.resize((600, 400), Image.Resampling.LANCZOS)
-        photo = ImageTk.PhotoImage(image)
-        
-        # Update canvas
-        canvas.delete("all")
-        canvas.create_image(0, 0, anchor='nw', image=photo)
-        canvas.image = photo  # Keep a reference
+        try:
+            # Load and display the chart
+            image = Image.open(chart_path)
+            image = image.resize((600, 400), Image.Resampling.LANCZOS)
+            photo = ImageTk.PhotoImage(image)
+            
+            # Update canvas
+            canvas.delete("all")  # Clear previous content
+            canvas.create_image(0, 0, anchor='nw', image=photo)
+            canvas.image = photo  # Keep a reference
+            
+        except Exception as e:
+            print(f"Error displaying chart: {e}")
+            canvas.delete("all")  # Clear canvas on error
     
     # Action handlers
     def _handle_logout(self):
