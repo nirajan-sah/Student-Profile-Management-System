@@ -56,7 +56,7 @@ def create_eca_chart(eca):
             
         # Extract activities and hours
         activities = [activity['activity'] for activity in eca]
-        hours = [activity['hours'] for activity in eca]
+        hours = [float(activity['hours_per_week']) for activity in eca]
         
         # Create the pie chart
         plt.figure(figsize=(10, 8))
@@ -86,61 +86,20 @@ def create_eca_chart(eca):
         print(f"Error creating ECA chart: {e}")
         return None
 
-def create_gpa_chart(gpa):
-    """Create a gauge chart for student GPA"""
-    try:
-        if gpa is None:
-            return None
-            
-        # Create the gauge chart
-        fig, ax = plt.subplots(figsize=(10, 6))
-        
-        # Create the gauge
-        gauge = ax.barh(0, gpa, color='skyblue', height=0.3)
-        
-        # Add value label
-        plt.text(gpa, 0, f'{gpa:.2f}', ha='center', va='center', fontsize=14)
-        
-        # Customize the chart
-        plt.title('Student GPA', fontsize=14, pad=20)
-        plt.xlim(0, 4.0)  # Set x-axis from 0 to 4.0
-        plt.ylim(-0.5, 0.5)  # Set y-axis to show only the gauge
-        plt.grid(axis='x', linestyle='--', alpha=0.7)
-        
-        # Remove y-axis
-        plt.yticks([])
-        
-        # Add x-axis labels
-        plt.xticks([0, 1, 2, 3, 4], ['0.0', '1.0', '2.0', '3.0', '4.0'])
-        
-        # Adjust layout
-        plt.tight_layout()
-        
-        # Save the chart
-        if not os.path.exists("data/charts"):
-            os.makedirs("data/charts")
-        plt.savefig("data/charts/gpa_chart.png")
-        plt.close()
-        
-        return "data/charts/gpa_chart.png"
-    except Exception as e:
-        print(f"Error creating GPA chart: {e}")
-        return None
-
-def create_performance_summary(grades, eca, gpa):
+def create_performance_summary(grades, eca):
     """Create a summary of student performance"""
     try:
-        if not grades or not eca or gpa is None:
+        if not grades or not eca:
             return None
             
         # Create a figure with subplots
-        fig = plt.figure(figsize=(15, 10))
+        fig = plt.figure(figsize=(15, 8))
         
         # Add a title
         fig.suptitle('Student Performance Summary', fontsize=16, y=0.95)
         
         # Create subplots
-        gs = fig.add_gridspec(2, 2)
+        gs = fig.add_gridspec(1, 2)
         
         # Grades subplot
         ax1 = fig.add_subplot(gs[0, 0])
@@ -162,22 +121,10 @@ def create_performance_summary(grades, eca, gpa):
         # ECA subplot
         ax2 = fig.add_subplot(gs[0, 1])
         activities = [activity['activity'] for activity in eca]
-        hours = [activity['hours'] for activity in eca]
+        hours = [float(activity['hours_per_week']) for activity in eca]
         ax2.pie(hours, labels=activities, autopct='%1.1f%%',
                 startangle=90, colors=plt.cm.Pastel1(np.linspace(0, 1, len(activities))))
         ax2.set_title('Distribution of ECA Hours')
-        
-        # GPA subplot
-        ax3 = fig.add_subplot(gs[1, :])
-        gauge = ax3.barh(0, gpa, color='skyblue', height=0.3)
-        ax3.text(gpa, 0, f'{gpa:.2f}', ha='center', va='center', fontsize=14)
-        ax3.set_title('GPA')
-        ax3.set_xlim(0, 4.0)
-        ax3.set_ylim(-0.5, 0.5)
-        ax3.grid(axis='x', linestyle='--', alpha=0.7)
-        ax3.set_yticks([])
-        ax3.set_xticks([0, 1, 2, 3, 4])
-        ax3.set_xticklabels(['0.0', '1.0', '2.0', '3.0', '4.0'])
         
         # Adjust layout
         plt.tight_layout()
@@ -191,4 +138,407 @@ def create_performance_summary(grades, eca, gpa):
         return "data/charts/performance_summary.png"
     except Exception as e:
         print(f"Error creating performance summary: {e}")
+        return None
+
+def calculate_gpa(username):
+    """Calculate GPA for a student based on their grades."""
+    try:
+        if not os.path.exists("data/grades.csv"):
+            return None
+            
+        grades_df = pd.read_csv("data/grades.csv")
+        student_grades = grades_df[grades_df['username'] == username]
+        
+        if student_grades.empty:
+            return None
+            
+        # Convert grades to numeric values
+        grades = pd.to_numeric(student_grades['grade'], errors='coerce')
+        
+        # Calculate GPA (assuming 4.0 scale)
+        gpa = grades.mean() / 25  # Converting percentage to 4.0 scale
+        
+        return round(gpa, 2)
+        
+    except Exception as e:
+        print(f"Error calculating GPA: {e}")
+        return None
+
+def calculate_semester_gpa(username, semester):
+    """Calculate GPA for a specific semester."""
+    try:
+        if not os.path.exists("data/grades.csv"):
+            return None
+            
+        grades_df = pd.read_csv("data/grades.csv")
+        student_grades = grades_df[
+            (grades_df['username'] == username) & 
+            (grades_df['semester'] == semester)
+        ]
+        
+        if student_grades.empty:
+            return None
+            
+        # Convert grades to numeric values
+        grades = pd.to_numeric(student_grades['grade'], errors='coerce')
+        
+        # Calculate GPA (assuming 4.0 scale)
+        gpa = grades.mean() / 25  # Converting percentage to 4.0 scale
+        
+        return round(gpa, 2)
+        
+    except Exception as e:
+        print(f"Error calculating semester GPA: {e}")
+        return None
+
+def calculate_level_gpa(username, level):
+    """Calculate GPA for a specific level."""
+    try:
+        if not os.path.exists("data/grades.csv"):
+            return None
+            
+        grades_df = pd.read_csv("data/grades.csv")
+        student_grades = grades_df[
+            (grades_df['username'] == username) & 
+            (grades_df['level'] == level)
+        ]
+        
+        if student_grades.empty:
+            return None
+            
+        # Convert grades to numeric values
+        grades = pd.to_numeric(student_grades['grade'], errors='coerce')
+        
+        # Calculate GPA (assuming 4.0 scale)
+        gpa = grades.mean() / 25  # Converting percentage to 4.0 scale
+        
+        return round(gpa, 2)
+        
+    except Exception as e:
+        print(f"Error calculating level GPA: {e}")
+        return None
+
+def get_grade_statistics(username):
+    """Get statistical information about a student's grades."""
+    try:
+        if not os.path.exists("data/grades.csv"):
+            return None
+            
+        grades_df = pd.read_csv("data/grades.csv")
+        student_grades = grades_df[grades_df['username'] == username]
+        
+        if student_grades.empty:
+            return None
+            
+        # Convert grades to numeric values
+        grades = pd.to_numeric(student_grades['grade'], errors='coerce')
+        
+        stats = {
+            'mean': round(grades.mean(), 2),
+            'median': round(grades.median(), 2),
+            'min': round(grades.min(), 2),
+            'max': round(grades.max(), 2),
+            'std_dev': round(grades.std(), 2)
+        }
+        
+        return stats
+        
+    except Exception as e:
+        print(f"Error calculating grade statistics: {e}")
+        return None
+
+def get_subject_performance(username, subject):
+    """Get performance information for a specific subject."""
+    try:
+        if not os.path.exists("data/grades.csv"):
+            return None
+            
+        grades_df = pd.read_csv("data/grades.csv")
+        subject_grades = grades_df[
+            (grades_df['username'] == username) & 
+            (grades_df['subject'] == subject)
+        ]
+        
+        if subject_grades.empty:
+            return None
+            
+        grade = float(subject_grades.iloc[0]['grade'])
+        
+        performance = {
+            'subject': subject,
+            'grade': grade,
+            'status': 'Pass' if grade >= 40 else 'Fail'
+        }
+        
+        return performance
+        
+    except Exception as e:
+        print(f"Error getting subject performance: {e}")
+        return None
+
+def get_semester_performance(username, semester):
+    """Get performance statistics for a specific semester."""
+    try:
+        if not os.path.exists("data/grades.csv"):
+            return None
+            
+        grades_df = pd.read_csv("data/grades.csv")
+        semester_grades = grades_df[
+            (grades_df['username'] == username) & 
+            (grades_df['semester'] == semester)
+        ]
+        
+        if semester_grades.empty:
+            return None
+            
+        # Convert grades to numeric values
+        grades = pd.to_numeric(semester_grades['grade'], errors='coerce')
+        
+        performance = {
+            'semester': semester,
+            'subjects': semester_grades['subject'].tolist(),
+            'grades': grades.tolist(),
+            'levels': semester_grades['level'].tolist(),
+            'average': round(grades.mean(), 2),
+            'highest': round(grades.max(), 2),
+            'lowest': round(grades.min(), 2)
+        }
+        
+        return performance
+        
+    except Exception as e:
+        print(f"Error calculating semester performance: {e}")
+        return None
+
+def get_level_performance(username, level):
+    """Get performance statistics for a specific level."""
+    try:
+        if not os.path.exists("data/grades.csv"):
+            return None
+            
+        grades_df = pd.read_csv("data/grades.csv")
+        level_grades = grades_df[
+            (grades_df['username'] == username) & 
+            (grades_df['level'] == level)
+        ]
+        
+        if level_grades.empty:
+            return None
+            
+        # Convert grades to numeric values
+        grades = pd.to_numeric(level_grades['grade'], errors='coerce')
+        
+        performance = {
+            'level': level,
+            'subjects': level_grades['subject'].tolist(),
+            'grades': grades.tolist(),
+            'semesters': level_grades['semester'].tolist(),
+            'average': round(grades.mean(), 2),
+            'highest': round(grades.max(), 2),
+            'lowest': round(grades.min(), 2)
+        }
+        
+        return performance
+        
+    except Exception as e:
+        print(f"Error calculating level performance: {e}")
+        return None
+
+def get_eca_summary(username):
+    """Get summary of student's extracurricular activities."""
+    try:
+        if not os.path.exists("data/eca.csv"):
+            return None
+            
+        eca_df = pd.read_csv("data/eca.csv")
+        student_eca = eca_df[eca_df['username'] == username]
+        
+        if student_eca.empty:
+            return None
+            
+        # Calculate total hours
+        total_hours = student_eca['hours_per_week'].sum()
+        
+        summary = {
+            'total_activities': len(student_eca),
+            'total_hours': total_hours,
+            'activities': student_eca.to_dict('records')
+        }
+        
+        return summary
+        
+    except Exception as e:
+        print(f"Error getting ECA summary: {e}")
+        return None
+
+def get_progress_towards_graduation(username):
+    """Calculate student's progress towards graduation."""
+    try:
+        if not os.path.exists("data/grades.csv"):
+            return None
+            
+        grades_df = pd.read_csv("data/grades.csv")
+        student_grades = grades_df[grades_df['username'] == username]
+        
+        if student_grades.empty:
+            return None
+            
+        # Assuming 120 credits needed for graduation
+        # Each course is worth 3 credits
+        total_credits_needed = 120
+        completed_credits = len(student_grades) * 3
+        
+        progress = {
+            'completed_credits': completed_credits,
+            'total_credits_needed': total_credits_needed,
+            'completion_percentage': round((completed_credits / total_credits_needed) * 100, 2),
+            'remaining_credits': total_credits_needed - completed_credits
+        }
+        
+        return progress
+        
+    except Exception as e:
+        print(f"Error calculating graduation progress: {e}")
+        return None
+
+def create_overall_grades_distribution():
+    """Create a bar chart showing the distribution of grades across all students"""
+    try:
+        # Read grades data
+        grades_df = pd.read_csv('data/grades.csv')
+        
+        # Create figure and axis
+        plt.figure(figsize=(10, 6))
+        
+        # Create histogram of grades
+        plt.hist(grades_df['grade'], bins=10, edgecolor='black')
+        
+        # Add labels and title
+        plt.xlabel('Grade')
+        plt.ylabel('Number of Students')
+        plt.title('Overall Grade Distribution')
+        
+        # Add grid
+        plt.grid(True, alpha=0.3)
+        
+        # Save the chart
+        plt.savefig('data/overall_grades_distribution.png')
+        plt.close()
+        
+        return 'data/overall_grades_distribution.png'
+    except Exception as e:
+        print(f"Error creating overall grades distribution chart: {str(e)}")
+        return None
+
+def create_subject_performance_comparison():
+    """Create a box plot comparing performance across different subjects"""
+    try:
+        # Read grades data
+        grades_df = pd.read_csv('data/grades.csv')
+        
+        # Create figure and axis
+        plt.figure(figsize=(12, 6))
+        
+        # Create box plot
+        grades_df.boxplot(column='grade', by='subject')
+        
+        # Add labels and title
+        plt.xlabel('Subject')
+        plt.ylabel('Grade')
+        plt.title('Subject Performance Comparison')
+        
+        # Rotate x-axis labels for better readability
+        plt.xticks(rotation=45)
+        
+        # Add grid
+        plt.grid(True, alpha=0.3)
+        
+        # Save the chart
+        plt.savefig('data/subject_performance_comparison.png')
+        plt.close()
+        
+        return 'data/subject_performance_comparison.png'
+    except Exception as e:
+        print(f"Error creating subject performance comparison chart: {str(e)}")
+        return None
+
+def create_eca_distribution():
+    """Create a pie chart showing the distribution of ECA types"""
+    try:
+        # Read ECA data
+        eca_df = pd.read_csv('data/eca.csv')
+        
+        # Count occurrences of each activity
+        activity_counts = eca_df['activity'].value_counts()
+        
+        # Create figure and axis
+        plt.figure(figsize=(10, 8))
+        
+        # Create pie chart
+        plt.pie(activity_counts, labels=activity_counts.index, autopct='%1.1f%%')
+        
+        # Add title
+        plt.title('Distribution of Extracurricular Activities')
+        
+        # Save the chart
+        plt.savefig('data/eca_distribution.png')
+        plt.close()
+        
+        return 'data/eca_distribution.png'
+    except Exception as e:
+        print(f"Error creating ECA distribution chart: {str(e)}")
+        return None
+
+def create_hours_distribution():
+    """Create a histogram showing the distribution of hours per week in ECAs"""
+    try:
+        # Read ECA data
+        eca_df = pd.read_csv('data/eca.csv')
+        
+        # Create figure and axis
+        plt.figure(figsize=(10, 6))
+        
+        # Create histogram
+        plt.hist(eca_df['hours_per_week'], bins=10, edgecolor='black')
+        
+        # Add labels and title
+        plt.xlabel('Hours per Week')
+        plt.ylabel('Number of Students')
+        plt.title('Distribution of ECA Hours per Week')
+        
+        # Add grid
+        plt.grid(True, alpha=0.3)
+        
+        # Save the chart
+        plt.savefig('data/hours_distribution.png')
+        plt.close()
+        
+        return 'data/hours_distribution.png'
+    except Exception as e:
+        print(f"Error creating hours distribution chart: {str(e)}")
+        return None
+
+def get_overall_statistics():
+    """Get overall statistics for all students"""
+    try:
+        # Read data
+        grades_df = pd.read_csv('data/grades.csv')
+        eca_df = pd.read_csv('data/eca.csv')
+        
+        stats = {
+            'total_students': len(grades_df['username'].unique()),
+            'total_grades': len(grades_df),
+            'total_ecas': len(eca_df),
+            'average_grade': grades_df['grade'].mean(),
+            'median_grade': grades_df['grade'].median(),
+            'grade_std_dev': grades_df['grade'].std(),
+            'average_hours': eca_df['hours_per_week'].mean(),
+            'total_hours': eca_df['hours_per_week'].sum(),
+            'unique_subjects': len(grades_df['subject'].unique()),
+            'unique_activities': len(eca_df['activity'].unique())
+        }
+        
+        return stats
+    except Exception as e:
+        print(f"Error getting overall statistics: {str(e)}")
         return None 

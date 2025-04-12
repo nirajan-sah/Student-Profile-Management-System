@@ -1,213 +1,181 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
-import os
-from PIL import Image, ImageTk
-from student import get_student_profile, update_student_profile, get_student_grades, update_student_grades, get_student_eca, update_student_eca
-from ui_components import create_button, create_label, create_entry, create_frame, create_combobox
+from student import get_student_grades, get_student_eca, update_student_profile
+from auth import get_user_details
+
 
 class StudentView:
-    def __init__(self, user_data):
-        self.root = tk.Tk()
-        self.root.title("Student Dashboard")
-        self.root.geometry("800x600")
-        self.user_data = user_data
+    def __init__(self, username, parent=None):
+        self.username = username
+        self.user_details = get_user_details(username)
+        
+        # Create main window
+        self.root = tk.Toplevel(parent) if parent else tk.Tk()
+        self.root.title(f"Student View - {self.user_details['full_name']}")
+        self.root.geometry("600x400")
+        
+        # Center the window
+        screen_width = self.root.winfo_screenwidth()
+        screen_height = self.root.winfo_screenheight()
+        x = (screen_width - 600) // 2
+        y = (screen_height - 400) // 2
+        self.root.geometry(f"600x400+{x}+{y}")
         
         self.create_widgets()
-        self.load_profile()
+        
+        if not parent:
+            self.root.mainloop()
+            
+    def create_widgets(self):
+        # Create notebook for tabs
+        notebook = ttk.Notebook(self.root)
+        notebook.pack(expand=True, fill='both', padx=10, pady=10)
+        
+        # Profile tab
+        profile_frame = ttk.Frame(notebook, padding="10")
+        notebook.add(profile_frame, text="Profile")
+        self.setup_profile_tab(profile_frame)
+        
+        # Grades tab
+        grades_frame = ttk.Frame(notebook, padding="10")
+        notebook.add(grades_frame, text="Grades")
+        self.setup_grades_tab(grades_frame)
+        
+        # ECA tab
+        eca_frame = ttk.Frame(notebook, padding="10")
+        notebook.add(eca_frame, text="ECA")
+        self.setup_eca_tab(eca_frame)
+        
+        # Logout button
+        logout_btn = ttk.Button(self.root, text="Logout", command=self.logout)
+        logout_btn.pack(pady=10)
+        
+    def setup_profile_tab(self, parent):
+        # Profile information
+        info_frame = ttk.LabelFrame(parent, text="Profile Information", padding="10")
+        info_frame.pack(fill='x', expand=True)
+        
+        # Create and populate fields
+        fields = [
+            ('Username:', self.user_details['username']),
+            ('Full Name:', self.user_details['full_name']),
+            ('Email:', self.user_details.get('email', 'Not set')),
+            ('Phone:', self.user_details.get('phone', 'Not set')),
+            ('Address:', self.user_details.get('address', 'Not set')),
+            ('Department:', self.user_details.get('department', 'Not set')),
+            ('Level:', self.user_details.get('level', 'Not set'))
+        ]
+        
+        self.profile_vars = {}
+        row = 0
+        for label, value in fields:
+            ttk.Label(info_frame, text=label).grid(row=row, column=0, sticky='w', pady=2)
+            var = tk.StringVar(value=value)
+            self.profile_vars[label] = var
+            if label != 'Username:':  # Username is not editable
+                entry = ttk.Entry(info_frame, textvariable=var)
+            else:
+                entry = ttk.Label(info_frame, text=value)
+            entry.grid(row=row, column=1, sticky='ew', padx=5, pady=2)
+            row += 1
+            
+        # Update button
+        update_btn = ttk.Button(parent, text="Update Profile", command=self.update_profile)
+        update_btn.pack(pady=10)
+        
+    def setup_grades_tab(self, parent):
+        # Create treeview for grades
+        columns = ('Subject', 'Grade')
+        self.grades_tree = ttk.Treeview(parent, columns=columns, show='headings')
+        
+        # Set column headings
+        for col in columns:
+            self.grades_tree.heading(col, text=col)
+            self.grades_tree.column(col, width=100)
+            
+        # Add scrollbar
+        scrollbar = ttk.Scrollbar(parent, orient='vertical', command=self.grades_tree.yview)
+        self.grades_tree.configure(yscrollcommand=scrollbar.set)
+        
+        # Pack widgets
+        self.grades_tree.pack(side='left', fill='both', expand=True)
+        scrollbar.pack(side='right', fill='y')
+        
+        # Load grades
         self.load_grades()
+        
+    def setup_eca_tab(self, parent):
+        # Create treeview for ECA
+        columns = ('Activity', 'Role', 'Hours/Week', 'Description')
+        self.eca_tree = ttk.Treeview(parent, columns=columns, show='headings')
+        
+        # Set column headings
+        for col in columns:
+            self.eca_tree.heading(col, text=col)
+            self.eca_tree.column(col, width=100)
+            
+        # Add scrollbar
+        scrollbar = ttk.Scrollbar(parent, orient='vertical', command=self.eca_tree.yview)
+        self.eca_tree.configure(yscrollcommand=scrollbar.set)
+        
+        # Pack widgets
+        self.eca_tree.pack(side='left', fill='both', expand=True)
+        scrollbar.pack(side='right', fill='y')
+        
+        # Load ECA
         self.load_eca()
         
-    def create_widgets(self):
-        # Create main container
-        main_container = create_frame(self.root)
-        main_container.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
-        
-        # Create header
-        header_frame = create_frame(main_container)
-        header_frame.pack(fill=tk.X, pady=(0, 20))
-        
-        create_label(header_frame, f"Welcome, {self.user_data['username']}", font=('Arial', 16, 'bold')).pack(side=tk.LEFT)
-        create_button(header_frame, "Logout", self.logout).pack(side=tk.RIGHT)
-        
-        # Create notebook for tabs
-        self.notebook = ttk.Notebook(main_container)
-        self.notebook.pack(fill=tk.BOTH, expand=True)
-        
-        # Create profile tab
-        profile_frame = create_frame(self.notebook)
-        self.notebook.add(profile_frame, text="Profile")
-        
-        # Profile form
-        form_frame = create_frame(profile_frame)
-        form_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
-        
-        # Full Name
-        name_frame = create_frame(form_frame)
-        name_frame.pack(fill=tk.X, pady=5)
-        create_label(name_frame, "Full Name:").pack(side=tk.LEFT)
-        self.name_entry = create_entry(name_frame)
-        self.name_entry.pack(side=tk.RIGHT, fill=tk.X, expand=True, padx=5)
-        
-        # Email
-        email_frame = create_frame(form_frame)
-        email_frame.pack(fill=tk.X, pady=5)
-        create_label(email_frame, "Email:").pack(side=tk.LEFT)
-        self.email_entry = create_entry(email_frame)
-        self.email_entry.pack(side=tk.RIGHT, fill=tk.X, expand=True, padx=5)
-        
-        # Phone
-        phone_frame = create_frame(form_frame)
-        phone_frame.pack(fill=tk.X, pady=5)
-        create_label(phone_frame, "Phone:").pack(side=tk.LEFT)
-        self.phone_entry = create_entry(phone_frame)
-        self.phone_entry.pack(side=tk.RIGHT, fill=tk.X, expand=True, padx=5)
-        
-        # Address
-        address_frame = create_frame(form_frame)
-        address_frame.pack(fill=tk.X, pady=5)
-        create_label(address_frame, "Address:").pack(side=tk.LEFT)
-        self.address_entry = create_entry(address_frame)
-        self.address_entry.pack(side=tk.RIGHT, fill=tk.X, expand=True, padx=5)
-        
-        # Department
-        dept_frame = create_frame(form_frame)
-        dept_frame.pack(fill=tk.X, pady=5)
-        create_label(dept_frame, "Department:").pack(side=tk.LEFT)
-        self.dept_entry = create_entry(dept_frame)
-        self.dept_entry.pack(side=tk.RIGHT, fill=tk.X, expand=True, padx=5)
-        
-        # Year of Study
-        year_frame = create_frame(form_frame)
-        year_frame.pack(fill=tk.X, pady=5)
-        create_label(year_frame, "Year of Study:").pack(side=tk.LEFT)
-        self.year_entry = create_entry(year_frame)
-        self.year_entry.pack(side=tk.RIGHT, fill=tk.X, expand=True, padx=5)
-        
-        create_button(form_frame, "Save Profile", self.save_profile).pack(pady=20)
-        
-        # Create grades tab
-        grades_frame = create_frame(self.notebook)
-        self.notebook.add(grades_frame, text="Grades")
-        
-        # Grades form
-        grades_form = create_frame(grades_frame)
-        grades_form.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
-        
-        # Subject grades
-        self.grade_entries = {}
-        subjects = ['Mathematics', 'Physics', 'Computer Science', 'English', 'History']
-        for subject in subjects:
-            subject_frame = create_frame(grades_form)
-            subject_frame.pack(fill=tk.X, pady=5)
-            create_label(subject_frame, f"{subject}:").pack(side=tk.LEFT)
-            self.grade_entries[subject] = create_entry(subject_frame)
-            self.grade_entries[subject].pack(side=tk.RIGHT, fill=tk.X, expand=True, padx=5)
-            
-        create_button(grades_form, "Save Grades", self.save_grades).pack(pady=20)
-        
-        # Create ECA tab
-        eca_frame = create_frame(self.notebook)
-        self.notebook.add(eca_frame, text="ECA")
-        
-        # ECA form
-        eca_form = create_frame(eca_frame)
-        eca_form.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
-        
-        # ECA activities
-        self.eca_entries = {}
-        activities = ['Football', 'Debate Club', 'Chess Club', 'Sports']
-        for activity in activities:
-            activity_frame = create_frame(eca_form)
-            activity_frame.pack(fill=tk.X, pady=5)
-            create_label(activity_frame, f"{activity}:").pack(side=tk.LEFT)
-            self.eca_entries[activity] = create_entry(activity_frame)
-            self.eca_entries[activity].pack(side=tk.RIGHT, fill=tk.X, expand=True, padx=5)
-            
-        create_button(eca_form, "Save ECA", self.save_eca).pack(pady=20)
-        
-    def load_profile(self):
-        profile = get_student_profile(self.user_data['username'])
-        if profile:
-            self.name_entry.delete(0, tk.END)
-            self.name_entry.insert(0, profile.get('full_name', ''))
-            self.email_entry.delete(0, tk.END)
-            self.email_entry.insert(0, profile.get('email', ''))
-            self.phone_entry.delete(0, tk.END)
-            self.phone_entry.insert(0, profile.get('phone', ''))
-            self.address_entry.delete(0, tk.END)
-            self.address_entry.insert(0, profile.get('address', ''))
-            self.dept_entry.delete(0, tk.END)
-            self.dept_entry.insert(0, profile.get('department', ''))
-            self.year_entry.delete(0, tk.END)
-            self.year_entry.insert(0, profile.get('year_of_study', ''))
-            
     def load_grades(self):
-        grades = get_student_grades(self.user_data['username'])
+        # Clear existing items
+        for item in self.grades_tree.get_children():
+            self.grades_tree.delete(item)
+            
+        # Load grades from database
+        grades = get_student_grades(self.username)
         if grades:
             for grade in grades:
-                subject = grade.get('subject')
-                if subject in self.grade_entries:
-                    self.grade_entries[subject].delete(0, tk.END)
-                    self.grade_entries[subject].insert(0, grade.get('grade', ''))
+                self.grades_tree.insert('', 'end', values=(
+                    grade['subject'],
+                    grade['grade']
+                ))
                 
     def load_eca(self):
-        eca = get_student_eca(self.user_data['username'])
+        # Clear existing items
+        for item in self.eca_tree.get_children():
+            self.eca_tree.delete(item)
+            
+        # Load ECA from database
+        eca = get_student_eca(self.username)
         if eca:
             for activity in eca:
-                name = activity.get('activity')
-                if name in self.eca_entries:
-                    self.eca_entries[name].delete(0, tk.END)
-                    self.eca_entries[name].insert(0, activity.get('role', ''))
+                self.eca_tree.insert('', 'end', values=(
+                    activity['activity'],
+                    activity['role'],
+                    activity['hours_per_week'],
+                    activity['description']
+                ))
                 
-    def save_profile(self):
+    def update_profile(self):
+        # Collect updated data
         data = {
-            'full_name': self.name_entry.get().strip(),
-            'email': self.email_entry.get().strip(),
-            'phone': self.phone_entry.get().strip(),
-            'address': self.address_entry.get().strip(),
-            'department': self.dept_entry.get().strip(),
-            'year_of_study': self.year_entry.get().strip()
+            'full_name': self.profile_vars['Full Name:'].get(),
+            'email': self.profile_vars['Email:'].get(),
+            'phone': self.profile_vars['Phone:'].get(),
+            'address': self.profile_vars['Address:'].get(),
+            'department': self.profile_vars['Department:'].get(),
+            'level': self.profile_vars['Level:'].get()
         }
         
-        if not data['full_name']:
-            messagebox.showerror("Error", "Full name is required")
-            return
-            
-        success, message = update_student_profile(self.user_data['username'], data)
-        if success:
-            messagebox.showinfo("Success", message)
+        # Update profile
+        if update_student_profile(self.username, data):
+            messagebox.showinfo("Success", "Profile updated successfully!")
+            self.user_details.update(data)
         else:
-            messagebox.showerror("Error", message)
-            
-    def save_grades(self):
-        grades = {}
-        for subject, entry in self.grade_entries.items():
-            grade = entry.get().strip()
-            if grade:
-                grades[subject] = grade
-                
-        success, message = update_student_grades(self.user_data['username'], grades)
-        if success:
-            messagebox.showinfo("Success", message)
-        else:
-            messagebox.showerror("Error", message)
-            
-    def save_eca(self):
-        eca = {}
-        for activity, entry in self.eca_entries.items():
-            role = entry.get().strip()
-            if role:
-                eca[activity] = {'activity': activity, 'role': role, 'hours': 2}
-                
-        success, message = update_student_eca(self.user_data['username'], eca)
-        if success:
-            messagebox.showinfo("Success", message)
-        else:
-            messagebox.showerror("Error", message)
+            messagebox.showerror("Error", "Failed to update profile")
             
     def logout(self):
-        if messagebox.askyesno("Confirm", "Are you sure you want to logout?"):
-            self.root.destroy()
-            
-    def run(self):
-        self.root.mainloop() 
+        if messagebox.askyesno("Logout", "Are you sure you want to logout?"):
+            if isinstance(self.root, tk.Toplevel):
+                self.root.master.destroy()  # Close the entire application
+            else:
+                self.root.destroy()  # Close just this window 

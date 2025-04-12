@@ -1,571 +1,624 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
-import os
+from admin import add_user, remove_user, list_all_users, get_user_details
+from student import add_student_grade, add_student_eca, get_student_grades, get_student_eca
+from mat import (
+    create_grades_chart, create_eca_chart, create_performance_summary,
+    calculate_gpa, get_grade_statistics, get_eca_summary, get_progress_towards_graduation,
+    create_overall_grades_distribution, create_subject_performance_comparison,
+    create_eca_distribution, create_hours_distribution, get_overall_statistics
+)
 from PIL import Image, ImageTk
-import matplotlib.pyplot as plt
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-import pandas as pd
-from admin import add_user, delete_user, modify_student_data, get_all_students, get_student_details
-from ui_components import create_button, create_label, create_entry, create_frame, create_combobox
+import os
 
 class AdminView:
-    def __init__(self, user_data):
-        self.root = tk.Tk()
+    """
+    Admin View - Main interface for administrators to manage the system.
+    This class creates a window with multiple tabs for different administrative tasks.
+    """
+    
+    def __init__(self, parent=None):
+        """
+        Initialize the Admin View window.
+        Args:
+            parent: The parent window (if any)
+        """
+        # Create the main window
+        self.root = tk.Toplevel(parent) if parent else tk.Tk()
         self.root.title("Admin Dashboard")
-        self.root.geometry("1200x800")
-        self.user_data = user_data
+        self.root.geometry("800x600")
         
-        self.create_widgets()
-        self.load_students()
+        # Center the window on screen
+        self._center_window()
         
-    def create_widgets(self):
-        # Create main container
-        main_container = create_frame(self.root)
-        main_container.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
+        # Create all the UI elements
+        self._create_interface()
         
-        # Create header
-        header_frame = create_frame(main_container)
-        header_frame.pack(fill=tk.X, pady=(0, 20))
+        # Start the main loop if this is the main window
+        if not parent:
+            self.root.mainloop()
+    
+    def _center_window(self):
+        """Center the window on the screen"""
+        screen_width = self.root.winfo_screenwidth()
+        screen_height = self.root.winfo_screenheight()
+        x = (screen_width - 800) // 2
+        y = (screen_height - 600) // 2
+        self.root.geometry(f"800x600+{x}+{y}")
+    
+    def _create_interface(self):
+        """Create the main interface with all tabs"""
+        # Create the tab container
+        tab_container = ttk.Notebook(self.root)
+        tab_container.pack(expand=True, fill='both', padx=10, pady=10)
         
-        create_label(header_frame, f"Welcome, {self.user_data['username']}", font=('Arial', 16, 'bold')).pack(side=tk.LEFT)
-        create_button(header_frame, "Logout", self.logout).pack(side=tk.RIGHT)
+        # Create each tab
+        self._create_users_tab(tab_container)
+        self._create_add_user_tab(tab_container)
+        self._create_add_grade_tab(tab_container)
+        self._create_add_eca_tab(tab_container)
+        self._create_student_stats_tab(tab_container)
+        self._create_overall_stats_tab(tab_container)
         
-        # Create notebook for tabs
-        self.notebook = ttk.Notebook(main_container)
-        self.notebook.pack(fill=tk.BOTH, expand=True)
+        # Add logout button
+        logout_btn = ttk.Button(self.root, text="Logout", command=self._handle_logout)
+        logout_btn.pack(pady=10)
+    
+    def _create_users_tab(self, parent):
+        """Create the Users Management tab"""
+        # Create the tab frame
+        tab = ttk.Frame(parent, padding="10")
+        parent.add(tab, text="Users")
         
-        # Create student management tab
-        student_frame = create_frame(self.notebook)
-        self.notebook.add(student_frame, text="Student Management")
+        # Create the users list
+        self._create_users_list(tab)
         
-        # Create student list
-        list_frame = create_frame(student_frame)
-        list_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
+        # Create action buttons
+        self._create_user_actions(tab)
+    
+    def _create_users_list(self, parent):
+        """Create the list of users"""
+        # Define columns
+        columns = ('Username', 'Full Name', 'Role', 'Email', 'Department', 'Level')
         
-        # Create treeview
-        columns = ('username', 'full_name', 'email', 'department', 'year_of_study')
-        self.tree = ttk.Treeview(list_frame, columns=columns, show='headings')
+        # Create the treeview (list)
+        self.users_list = ttk.Treeview(parent, columns=columns, show='headings')
         
-        # Set column headings
-        self.tree.heading('username', text='Username')
-        self.tree.heading('full_name', text='Full Name')
-        self.tree.heading('email', text='Email')
-        self.tree.heading('department', text='Department')
-        self.tree.heading('year_of_study', text='Year')
-        
-        # Set column widths
-        self.tree.column('username', width=100)
-        self.tree.column('full_name', width=150)
-        self.tree.column('email', width=200)
-        self.tree.column('department', width=100)
-        self.tree.column('year_of_study', width=50)
+        # Set up each column
+        for col in columns:
+            self.users_list.heading(col, text=col)
+            self.users_list.column(col, width=100)
         
         # Add scrollbar
-        scrollbar = ttk.Scrollbar(list_frame, orient=tk.VERTICAL, command=self.tree.yview)
-        self.tree.configure(yscrollcommand=scrollbar.set)
+        scrollbar = ttk.Scrollbar(parent, orient='vertical', command=self.users_list.yview)
+        self.users_list.configure(yscrollcommand=scrollbar.set)
         
-        # Pack tree and scrollbar
-        self.tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        # Place the list and scrollbar
+        self.users_list.pack(side='left', fill='both', expand=True)
+        scrollbar.pack(side='right', fill='y')
         
-        # Create buttons frame
-        button_frame = create_frame(student_frame)
-        button_frame.pack(fill=tk.X, padx=20, pady=10)
+        # Load initial data
+        self._load_users()
+    
+    def _create_user_actions(self, parent):
+        """Create buttons for user management actions"""
+        # Create button container
+        button_frame = ttk.Frame(parent)
+        button_frame.pack(fill='x', pady=10)
         
-        create_button(button_frame, "Add Student", self.show_add_student).pack(side=tk.LEFT, padx=5)
-        create_button(button_frame, "Edit Student", self.show_edit_student).pack(side=tk.LEFT, padx=5)
-        create_button(button_frame, "Delete Student", self.delete_student).pack(side=tk.LEFT, padx=5)
-        create_button(button_frame, "View Details", self.view_student_details).pack(side=tk.LEFT, padx=5)
+        # Create buttons
+        ttk.Button(button_frame, text="Refresh", command=self._load_users).pack(side='left', padx=5)
+        ttk.Button(button_frame, text="View Details", command=self._view_user_details).pack(side='left', padx=5)
+        ttk.Button(button_frame, text="Remove User", command=self._remove_user).pack(side='left', padx=5)
+    
+    def _create_add_user_tab(self, parent):
+        """Create the Add User tab"""
+        # Create the tab frame
+        tab = ttk.Frame(parent, padding="10")
+        parent.add(tab, text="Add User")
         
-        # Create analytics tab
-        analytics_frame = create_frame(self.notebook)
-        self.notebook.add(analytics_frame, text="Analytics")
+        # Create the form
+        self._create_user_form(tab)
+    
+    def _create_user_form(self, parent):
+        """Create the form for adding a new user"""
+        # Create form container
+        form = ttk.LabelFrame(parent, text="Add New User", padding="10")
+        form.pack(fill='x', expand=True)
         
-        # Create visualization frames
-        viz_frame = create_frame(analytics_frame)
-        viz_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
-        
-        # Department distribution
-        dept_frame = create_frame(viz_frame)
-        dept_frame.pack(fill=tk.BOTH, expand=True, pady=10)
-        create_label(dept_frame, "Department Distribution", font=('Arial', 12, 'bold')).pack()
-        self.dept_canvas = self.create_department_chart(dept_frame)
-        self.dept_canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
-        
-        # Year distribution
-        year_frame = create_frame(viz_frame)
-        year_frame.pack(fill=tk.BOTH, expand=True, pady=10)
-        create_label(year_frame, "Year of Study Distribution", font=('Arial', 12, 'bold')).pack()
-        self.year_canvas = self.create_year_chart(year_frame)
-        self.year_canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
-        
-        # Grade distribution
-        grade_frame = create_frame(viz_frame)
-        grade_frame.pack(fill=tk.BOTH, expand=True, pady=10)
-        create_label(grade_frame, "Grade Distribution", font=('Arial', 12, 'bold')).pack()
-        self.grade_canvas = self.create_grade_chart(grade_frame)
-        self.grade_canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
-        
-        # ECA participation
-        eca_frame = create_frame(viz_frame)
-        eca_frame.pack(fill=tk.BOTH, expand=True, pady=10)
-        create_label(eca_frame, "ECA Participation", font=('Arial', 12, 'bold')).pack()
-        self.eca_canvas = self.create_eca_chart(eca_frame)
-        self.eca_canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
-        
-    def create_department_chart(self, parent):
-        fig, ax = plt.subplots(figsize=(8, 4))
-        students = get_all_students()
-        df = pd.DataFrame(students)
-        if not df.empty:
-            dept_counts = df['department'].value_counts()
-            dept_counts.plot(kind='bar', ax=ax)
-            ax.set_title('Student Distribution by Department')
-            ax.set_xlabel('Department')
-            ax.set_ylabel('Number of Students')
-            plt.xticks(rotation=45)
-            plt.tight_layout()
-        return FigureCanvasTkAgg(fig, parent)
-        
-    def create_year_chart(self, parent):
-        fig, ax = plt.subplots(figsize=(8, 4))
-        students = get_all_students()
-        df = pd.DataFrame(students)
-        if not df.empty:
-            year_counts = df['year_of_study'].value_counts().sort_index()
-            year_counts.plot(kind='bar', ax=ax)
-            ax.set_title('Student Distribution by Year')
-            ax.set_xlabel('Year of Study')
-            ax.set_ylabel('Number of Students')
-            plt.tight_layout()
-        return FigureCanvasTkAgg(fig, parent)
-        
-    def create_grade_chart(self, parent):
-        fig, ax = plt.subplots(figsize=(8, 4))
-        students = get_all_students()
-        grade_counts = {'A': 0, 'B': 0, 'C': 0, 'D': 0, 'F': 0}
-        
-        for student in students:
-            grades = student.get('grades', [])
-            for grade in grades:
-                grade_value = grade.get('grade', '')
-                if isinstance(grade_value, (int, float)):
-                    if grade_value >= 90:
-                        grade_counts['A'] += 1
-                    elif grade_value >= 80:
-                        grade_counts['B'] += 1
-                    elif grade_value >= 70:
-                        grade_counts['C'] += 1
-                    elif grade_value >= 60:
-                        grade_counts['D'] += 1
-                    else:
-                        grade_counts['F'] += 1
-                elif grade_value in grade_counts:
-                    grade_counts[grade_value] += 1
-                    
-        plt.bar(grade_counts.keys(), grade_counts.values())
-        ax.set_title('Grade Distribution')
-        ax.set_xlabel('Grade')
-        ax.set_ylabel('Number of Students')
-        plt.tight_layout()
-        return FigureCanvasTkAgg(fig, parent)
-        
-    def create_eca_chart(self, parent):
-        fig, ax = plt.subplots(figsize=(8, 4))
-        students = get_all_students()
-        eca_counts = {}
-        
-        for student in students:
-            eca = student.get('eca', [])
-            for activity in eca:
-                activity_name = activity.get('activity', '')
-                if activity_name:
-                    eca_counts[activity_name] = eca_counts.get(activity_name, 0) + 1
-                    
-        if eca_counts:
-            plt.bar(eca_counts.keys(), eca_counts.values())
-            ax.set_title('ECA Participation')
-            ax.set_xlabel('Activity')
-            ax.set_ylabel('Number of Students')
-            plt.xticks(rotation=45)
-            plt.tight_layout()
-        return FigureCanvasTkAgg(fig, parent)
-        
-    def update_visualizations(self):
-        # Update all charts
-        self.dept_canvas = self.create_department_chart(self.dept_canvas.get_tk_widget().master)
-        self.year_canvas = self.create_year_chart(self.year_canvas.get_tk_widget().master)
-        self.grade_canvas = self.create_grade_chart(self.grade_canvas.get_tk_widget().master)
-        self.eca_canvas = self.create_eca_chart(self.eca_canvas.get_tk_widget().master)
-        
-    def load_students(self):
-        # Clear existing items
-        for item in self.tree.get_children():
-            self.tree.delete(item)
-            
-        # Load students
-        students = get_all_students()
-        for student in students:
-            self.tree.insert('', tk.END, values=(
-                student.get('username', ''),
-                student.get('full_name', ''),
-                student.get('email', ''),
-                student.get('department', ''),
-                student.get('year_of_study', '')
-            ))
-            
-        # Update visualizations
-        self.update_visualizations()
-        
-    def show_add_student(self):
-        # Create add student window
-        add_window = tk.Toplevel(self.root)
-        add_window.title("Add Student")
-        add_window.geometry("400x500")
-        
-        # Create form
-        form_frame = create_frame(add_window)
-        form_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
-        
-        # Username
-        username_frame = create_frame(form_frame)
-        username_frame.pack(fill=tk.X, pady=5)
-        create_label(username_frame, "Username:").pack(side=tk.LEFT)
-        username_entry = create_entry(username_frame)
-        username_entry.pack(side=tk.RIGHT, fill=tk.X, expand=True, padx=5)
-        
-        # Full Name
-        name_frame = create_frame(form_frame)
-        name_frame.pack(fill=tk.X, pady=5)
-        create_label(name_frame, "Full Name:").pack(side=tk.LEFT)
-        name_entry = create_entry(name_frame)
-        name_entry.pack(side=tk.RIGHT, fill=tk.X, expand=True, padx=5)
-        
-        # Email
-        email_frame = create_frame(form_frame)
-        email_frame.pack(fill=tk.X, pady=5)
-        create_label(email_frame, "Email:").pack(side=tk.LEFT)
-        email_entry = create_entry(email_frame)
-        email_entry.pack(side=tk.RIGHT, fill=tk.X, expand=True, padx=5)
-        
-        # Phone
-        phone_frame = create_frame(form_frame)
-        phone_frame.pack(fill=tk.X, pady=5)
-        create_label(phone_frame, "Phone:").pack(side=tk.LEFT)
-        phone_entry = create_entry(phone_frame)
-        phone_entry.pack(side=tk.RIGHT, fill=tk.X, expand=True, padx=5)
-        
-        # Address
-        address_frame = create_frame(form_frame)
-        address_frame.pack(fill=tk.X, pady=5)
-        create_label(address_frame, "Address:").pack(side=tk.LEFT)
-        address_entry = create_entry(address_frame)
-        address_entry.pack(side=tk.RIGHT, fill=tk.X, expand=True, padx=5)
-        
-        # Department
-        dept_frame = create_frame(form_frame)
-        dept_frame.pack(fill=tk.X, pady=5)
-        create_label(dept_frame, "Department:").pack(side=tk.LEFT)
-        dept_entry = create_entry(dept_frame)
-        dept_entry.pack(side=tk.RIGHT, fill=tk.X, expand=True, padx=5)
-        
-        # Year of Study
-        year_frame = create_frame(form_frame)
-        year_frame.pack(fill=tk.X, pady=5)
-        create_label(year_frame, "Year of Study:").pack(side=tk.LEFT)
-        year_entry = create_entry(year_frame)
-        year_entry.pack(side=tk.RIGHT, fill=tk.X, expand=True, padx=5)
-        
-        # Password
-        password_frame = create_frame(form_frame)
-        password_frame.pack(fill=tk.X, pady=5)
-        create_label(password_frame, "Password:").pack(side=tk.LEFT)
-        password_entry = create_entry(password_frame, show="*")
-        password_entry.pack(side=tk.RIGHT, fill=tk.X, expand=True, padx=5)
-        
-        def add_student():
-            username = username_entry.get().strip()
-            full_name = name_entry.get().strip()
-            email = email_entry.get().strip()
-            phone = phone_entry.get().strip()
-            address = address_entry.get().strip()
-            department = dept_entry.get().strip()
-            year = year_entry.get().strip()
-            password = password_entry.get().strip()
-            
-            if not all([username, full_name, password]):
-                messagebox.showerror("Error", "Username, full name and password are required")
-                return
-                
-            success, message = add_user(username, full_name, password, 'student')
-            if success:
-                # Update additional profile information
-                data = {
-                    'email': email,
-                    'phone': phone,
-                    'address': address,
-                    'department': department,
-                    'year_of_study': year
-                }
-                modify_student_data(username, data)
-                messagebox.showinfo("Success", message)
-                add_window.destroy()
-                self.load_students()
-            else:
-                messagebox.showerror("Error", message)
-                
-        create_button(form_frame, "Add Student", add_student).pack(pady=20)
-        
-    def show_edit_student(self):
-        selected = self.tree.selection()
-        if not selected:
-            messagebox.showwarning("Warning", "Please select a student to edit")
-            return
-            
-        username = self.tree.item(selected[0])['values'][0]
-        student = get_student_details(username)
-        
-        if not student:
-            messagebox.showerror("Error", "Student not found")
-            return
-            
-        # Create edit window
-        edit_window = tk.Toplevel(self.root)
-        edit_window.title("Edit Student")
-        edit_window.geometry("400x500")
-        
-        # Create form
-        form_frame = create_frame(edit_window)
-        form_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
-        
-        # Full Name
-        name_frame = create_frame(form_frame)
-        name_frame.pack(fill=tk.X, pady=5)
-        create_label(name_frame, "Full Name:").pack(side=tk.LEFT)
-        name_entry = create_entry(name_frame)
-        name_entry.insert(0, student.get('full_name', ''))
-        name_entry.pack(side=tk.RIGHT, fill=tk.X, expand=True, padx=5)
-        
-        # Email
-        email_frame = create_frame(form_frame)
-        email_frame.pack(fill=tk.X, pady=5)
-        create_label(email_frame, "Email:").pack(side=tk.LEFT)
-        email_entry = create_entry(email_frame)
-        email_entry.insert(0, student.get('email', ''))
-        email_entry.pack(side=tk.RIGHT, fill=tk.X, expand=True, padx=5)
-        
-        # Phone
-        phone_frame = create_frame(form_frame)
-        phone_frame.pack(fill=tk.X, pady=5)
-        create_label(phone_frame, "Phone:").pack(side=tk.LEFT)
-        phone_entry = create_entry(phone_frame)
-        phone_entry.insert(0, student.get('phone', ''))
-        phone_entry.pack(side=tk.RIGHT, fill=tk.X, expand=True, padx=5)
-        
-        # Address
-        address_frame = create_frame(form_frame)
-        address_frame.pack(fill=tk.X, pady=5)
-        create_label(address_frame, "Address:").pack(side=tk.LEFT)
-        address_entry = create_entry(address_frame)
-        address_entry.insert(0, student.get('address', ''))
-        address_entry.pack(side=tk.RIGHT, fill=tk.X, expand=True, padx=5)
-        
-        # Department
-        dept_frame = create_frame(form_frame)
-        dept_frame.pack(fill=tk.X, pady=5)
-        create_label(dept_frame, "Department:").pack(side=tk.LEFT)
-        dept_entry = create_entry(dept_frame)
-        dept_entry.insert(0, student.get('department', ''))
-        dept_entry.pack(side=tk.RIGHT, fill=tk.X, expand=True, padx=5)
-        
-        # Year of Study
-        year_frame = create_frame(form_frame)
-        year_frame.pack(fill=tk.X, pady=5)
-        create_label(year_frame, "Year of Study:").pack(side=tk.LEFT)
-        year_entry = create_entry(year_frame)
-        year_entry.insert(0, student.get('year_of_study', ''))
-        year_entry.pack(side=tk.RIGHT, fill=tk.X, expand=True, padx=5)
-        
-        # Password
-        password_frame = create_frame(form_frame)
-        password_frame.pack(fill=tk.X, pady=5)
-        create_label(password_frame, "New Password (leave blank to keep current):").pack(side=tk.LEFT)
-        password_entry = create_entry(password_frame, show="*")
-        password_entry.pack(side=tk.RIGHT, fill=tk.X, expand=True, padx=5)
-        
-        def save_changes():
-            data = {
-                'full_name': name_entry.get().strip(),
-                'email': email_entry.get().strip(),
-                'phone': phone_entry.get().strip(),
-                'address': address_entry.get().strip(),
-                'department': dept_entry.get().strip(),
-                'year_of_study': year_entry.get().strip()
-            }
-            
-            password = password_entry.get().strip()
-            if password:
-                data['password'] = password
-                
-            success, message = modify_student_data(username, data)
-            if success:
-                messagebox.showinfo("Success", message)
-                edit_window.destroy()
-                self.load_students()
-            else:
-                messagebox.showerror("Error", message)
-                
-        create_button(form_frame, "Save Changes", save_changes).pack(pady=20)
-        
-    def delete_student(self):
-        selected = self.tree.selection()
-        if not selected:
-            messagebox.showwarning("Warning", "Please select a student to delete")
-            return
-            
-        username = self.tree.item(selected[0])['values'][0]
-        
-        if messagebox.askyesno("Confirm", f"Are you sure you want to delete {username}?"):
-            success, message = delete_user(username)
-            if success:
-                messagebox.showinfo("Success", message)
-                self.load_students()
-            else:
-                messagebox.showerror("Error", message)
-                
-    def view_student_details(self):
-        selected = self.tree.selection()
-        if not selected:
-            messagebox.showwarning("Warning", "Please select a student to view details")
-            return
-            
-        username = self.tree.item(selected[0])['values'][0]
-        student = get_student_details(username)
-        
-        if not student:
-            messagebox.showerror("Error", "Student not found")
-            return
-            
-        # Create details window
-        details_window = tk.Toplevel(self.root)
-        details_window.title(f"Student Details - {username}")
-        details_window.geometry("600x400")
-        
-        # Create details view
-        details_frame = create_frame(details_window)
-        details_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
-        
-        # Create notebook for tabs
-        notebook = ttk.Notebook(details_frame)
-        notebook.pack(fill=tk.BOTH, expand=True)
-        
-        # Profile tab
-        profile_frame = create_frame(notebook)
-        notebook.add(profile_frame, text="Profile")
-        
-        # Profile details
-        details = [
-            ("Username", student.get('username', '')),
-            ("Full Name", student.get('full_name', '')),
-            ("Email", student.get('email', '')),
-            ("Phone", student.get('phone', '')),
-            ("Address", student.get('address', '')),
-            ("Department", student.get('department', '')),
-            ("Year of Study", student.get('year_of_study', '')),
-            ("Enrollment Date", student.get('enrollment_date', ''))
+        # Define form fields
+        fields = [
+            ('username', 'Username:'),
+            ('full_name', 'Full Name:'),
+            ('password', 'Password:', True),  # True indicates password field
+            ('role', 'Role (admin/student):'),
+            ('email', 'Email:'),
+            ('phone', 'Phone:'),
+            ('address', 'Address:'),
+            ('department', 'Department:'),
+            ('level', 'Level (0-4):')
         ]
         
-        for label, value in details:
-            row_frame = create_frame(profile_frame)
-            row_frame.pack(fill=tk.X, pady=5)
-            create_label(row_frame, f"{label}:").pack(side=tk.LEFT)
-            create_label(row_frame, value).pack(side=tk.RIGHT)
+        # Create form fields
+        self.user_form_vars = {}
+        for i, (field, label, *args) in enumerate(fields):
+            # Create label
+            ttk.Label(form, text=label).grid(row=i, column=0, sticky='w', pady=2)
             
-        # Grades tab
-        grades_frame = create_frame(notebook)
-        notebook.add(grades_frame, text="Grades")
+            # Create entry field
+            var = tk.StringVar()
+            self.user_form_vars[field] = var
+            entry = ttk.Entry(form, textvariable=var, show="*" if args and args[0] else "")
+            entry.grid(row=i, column=1, sticky='ew', padx=5, pady=2)
         
-        # Create grades treeview
-        columns = ('subject', 'grade', 'credits', 'semester', 'year')
-        grades_tree = ttk.Treeview(grades_frame, columns=columns, show='headings')
+        # Add submit button
+        ttk.Button(parent, text="Add User", command=self._add_user).pack(pady=10)
+    
+    def _create_add_grade_tab(self, parent):
+        """Create the Add Grade tab"""
+        # Create the tab frame
+        tab = ttk.Frame(parent, padding="10")
+        parent.add(tab, text="Add Grade")
         
-        # Set column headings
-        grades_tree.heading('subject', text='Subject')
-        grades_tree.heading('grade', text='Grade')
-        grades_tree.heading('credits', text='Credits')
-        grades_tree.heading('semester', text='Semester')
-        grades_tree.heading('year', text='Year')
+        # Create the form
+        self._create_grade_form(tab)
+    
+    def _create_grade_form(self, parent):
+        """Create the form for adding a grade"""
+        # Create form container
+        form = ttk.LabelFrame(parent, text="Add Student Grade", padding="10")
+        form.pack(fill='x', expand=True)
         
-        # Set column widths
-        grades_tree.column('subject', width=150)
-        grades_tree.column('grade', width=50)
-        grades_tree.column('credits', width=50)
-        grades_tree.column('semester', width=100)
-        grades_tree.column('year', width=50)
+        # Define form fields
+        fields = [
+            ('username', 'Student Username:'),
+            ('subject', 'Subject:'),
+            ('grade', 'Grade (0-100):')
+        ]
         
-        # Add scrollbar
-        scrollbar = ttk.Scrollbar(grades_frame, orient=tk.VERTICAL, command=grades_tree.yview)
-        grades_tree.configure(yscrollcommand=scrollbar.set)
-        
-        # Pack tree and scrollbar
-        grades_tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-        
-        # Load grades
-        grades = student.get('grades', [])
-        for grade in grades:
-            grades_tree.insert('', tk.END, values=(
-                grade.get('subject', ''),
-                grade.get('grade', ''),
-                grade.get('credits', ''),
-                grade.get('semester', ''),
-                grade.get('year', '')
-            ))
+        # Create form fields
+        self.grade_form_vars = {}
+        for i, (field, label) in enumerate(fields):
+            # Create label
+            ttk.Label(form, text=label).grid(row=i, column=0, sticky='w', pady=2)
             
-        # ECA tab
-        eca_frame = create_frame(notebook)
-        notebook.add(eca_frame, text="ECA")
+            # Create entry field
+            var = tk.StringVar()
+            self.grade_form_vars[field] = var
+            entry = ttk.Entry(form, textvariable=var)
+            entry.grid(row=i, column=1, sticky='ew', padx=5, pady=2)
         
-        # Create ECA treeview
-        columns = ('activity', 'role', 'hours', 'start_date', 'end_date')
-        eca_tree = ttk.Treeview(eca_frame, columns=columns, show='headings')
+        # Add submit button
+        ttk.Button(parent, text="Add Grade", command=self._add_grade).pack(pady=10)
+    
+    def _create_add_eca_tab(self, parent):
+        """Create the Add ECA tab"""
+        # Create the tab frame
+        tab = ttk.Frame(parent, padding="10")
+        parent.add(tab, text="Add ECA")
         
-        # Set column headings
-        eca_tree.heading('activity', text='Activity')
-        eca_tree.heading('role', text='Role')
-        eca_tree.heading('hours', text='Hours/Week')
-        eca_tree.heading('start_date', text='Start Date')
-        eca_tree.heading('end_date', text='End Date')
+        # Create the form
+        self._create_eca_form(tab)
+    
+    def _create_eca_form(self, parent):
+        """Create the form for adding an ECA"""
+        # Create form container
+        form = ttk.LabelFrame(parent, text="Add Student ECA", padding="10")
+        form.pack(fill='x', expand=True)
         
-        # Set column widths
-        eca_tree.column('activity', width=150)
-        eca_tree.column('role', width=100)
-        eca_tree.column('hours', width=100)
-        eca_tree.column('start_date', width=100)
-        eca_tree.column('end_date', width=100)
+        # Define form fields
+        fields = [
+            ('username', 'Student Username:'),
+            ('activity', 'Activity Name:'),
+            ('role', 'Role in Activity:'),
+            ('hours_per_week', 'Hours per Week:'),
+            ('description', 'Description:')
+        ]
         
-        # Add scrollbar
-        scrollbar = ttk.Scrollbar(eca_frame, orient=tk.VERTICAL, command=eca_tree.yview)
-        eca_tree.configure(yscrollcommand=scrollbar.set)
-        
-        # Pack tree and scrollbar
-        eca_tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-        
-        # Load ECA
-        eca = student.get('eca', [])
-        for activity in eca:
-            eca_tree.insert('', tk.END, values=(
-                activity.get('activity', ''),
-                activity.get('role', ''),
-                activity.get('hours', ''),
-                activity.get('start_date', ''),
-                activity.get('end_date', '')
-            ))
+        # Create form fields
+        self.eca_form_vars = {}
+        for i, (field, label) in enumerate(fields):
+            # Create label
+            ttk.Label(form, text=label).grid(row=i, column=0, sticky='w', pady=2)
             
-    def logout(self):
-        if messagebox.askyesno("Confirm", "Are you sure you want to logout?"):
-            self.root.destroy()
-            
-    def run(self):
-        self.root.mainloop() 
+            # Create entry field
+            var = tk.StringVar()
+            self.eca_form_vars[field] = var
+            entry = ttk.Entry(form, textvariable=var, width=40 if field == 'description' else None)
+            entry.grid(row=i, column=1, sticky='ew', padx=5, pady=2)
+        
+        # Add submit button
+        ttk.Button(parent, text="Add ECA", command=self._add_eca).pack(pady=10)
+    
+    def _create_student_stats_tab(self, parent):
+        """Create the Student Statistics tab"""
+        # Create the tab frame
+        tab = ttk.Frame(parent, padding="10")
+        parent.add(tab, text="Student Statistics")
+        
+        # Create the interface
+        self._create_student_stats_interface(tab)
+    
+    def _create_student_stats_interface(self, parent):
+        """Create the student statistics interface"""
+        # Create main container
+        main_frame = ttk.Frame(parent)
+        main_frame.pack(fill='both', expand=True)
+        
+        # Create left panel (controls)
+        left_panel = ttk.LabelFrame(main_frame, text="Controls", padding="10")
+        left_panel.pack(side='left', fill='y', padx=5)
+        
+        # Add student selector
+        ttk.Label(left_panel, text="Select Student:").pack(pady=5)
+        self.student_selector = ttk.Combobox(left_panel)
+        self.student_selector.pack(pady=5)
+        
+        # Add refresh button
+        ttk.Button(left_panel, text="Refresh Data", command=self._refresh_student_stats).pack(pady=10)
+        
+        # Create right panel (statistics and charts)
+        right_panel = ttk.Frame(main_frame)
+        right_panel.pack(side='right', fill='both', expand=True, padx=5)
+        
+        # Add statistics display
+        stats_frame = ttk.LabelFrame(right_panel, text="Statistics", padding="10")
+        stats_frame.pack(fill='x', pady=5)
+        self.stats_display = tk.Text(stats_frame, height=10, width=50)
+        self.stats_display.pack(fill='x')
+        
+        # Add chart display
+        chart_frame = ttk.LabelFrame(right_panel, text="Charts", padding="10")
+        chart_frame.pack(fill='both', expand=True, pady=5)
+        self.chart_canvas = tk.Canvas(chart_frame, width=600, height=400)
+        self.chart_canvas.pack(fill='both', expand=True)
+        
+        # Load initial data
+        self._load_student_list()
+    
+    def _create_overall_stats_tab(self, parent):
+        """Create the Overall Statistics tab"""
+        # Create the tab frame
+        tab = ttk.Frame(parent, padding="10")
+        parent.add(tab, text="Overall Statistics")
+        
+        # Create the interface
+        self._create_overall_stats_interface(tab)
+    
+    def _create_overall_stats_interface(self, parent):
+        """Create the overall statistics interface"""
+        # Create main container
+        main_frame = ttk.Frame(parent)
+        main_frame.pack(fill='both', expand=True)
+        
+        # Create left panel (statistics)
+        left_panel = ttk.LabelFrame(main_frame, text="Overall Statistics", padding="10")
+        left_panel.pack(side='left', fill='y', padx=5)
+        
+        # Add statistics display
+        self.overall_stats_display = tk.Text(left_panel, height=20, width=40)
+        self.overall_stats_display.pack(fill='x')
+        
+        # Add refresh button
+        ttk.Button(left_panel, text="Refresh Statistics", 
+                  command=self._refresh_overall_stats).pack(pady=10)
+        
+        # Create right panel (charts)
+        right_panel = ttk.Frame(main_frame)
+        right_panel.pack(side='right', fill='both', expand=True, padx=5)
+        
+        # Create chart tabs
+        chart_tabs = ttk.Notebook(right_panel)
+        chart_tabs.pack(fill='both', expand=True)
+        
+        # Create each chart tab
+        self._create_chart_tab(chart_tabs, "Grades Distribution", 'grades')
+        self._create_chart_tab(chart_tabs, "Subject Performance", 'subjects')
+        self._create_chart_tab(chart_tabs, "ECA Distribution", 'eca')
+        self._create_chart_tab(chart_tabs, "Hours Distribution", 'hours')
+        
+        # Load initial data
+        self._refresh_overall_stats()
+    
+    def _create_chart_tab(self, parent, title, chart_type):
+        """Create a tab for displaying a chart"""
+        # Create tab frame
+        tab = ttk.Frame(parent)
+        parent.add(tab, text=title)
+        
+        # Create canvas for chart
+        canvas = tk.Canvas(tab, width=600, height=400)
+        canvas.pack(fill='both', expand=True)
+        
+        # Store canvas reference
+        if chart_type == 'grades':
+            self.grades_chart = canvas
+        elif chart_type == 'subjects':
+            self.subjects_chart = canvas
+        elif chart_type == 'eca':
+            self.eca_chart = canvas
+        elif chart_type == 'hours':
+            self.hours_chart = canvas
+    
+    # Data handling methods
+    def _load_users(self):
+        """Load the list of users"""
+        # Clear existing items
+        for item in self.users_list.get_children():
+            self.users_list.delete(item)
+        
+        # Load users from database
+        users = list_all_users()
+        if users:
+            for user in users:
+                self.users_list.insert('', 'end', values=(
+                    user['username'],
+                    user['full_name'],
+                    user['role'],
+                    user.get('email', ''),
+                    user.get('department', ''),
+                    user.get('level', '')
+                ))
+    
+    def _load_student_list(self):
+        """Load the list of students for the selector"""
+        users = list_all_users()
+        if users:
+            students = [user['username'] for user in users if user['role'] == 'student']
+            self.student_selector['values'] = students
+            if students:
+                self.student_selector.set(students[0])
+                self._refresh_student_stats()
+    
+    def _refresh_student_stats(self):
+        """Refresh the statistics for the selected student"""
+        username = self.student_selector.get()
+        if not username:
+            return
+        
+        # Clear previous statistics
+        self.stats_display.delete('1.0', tk.END)
+        
+        # Get student data
+        grades = get_student_grades(username)
+        eca = get_student_eca(username)
+        
+        if not grades and not eca:
+            self.stats_display.insert(tk.END, "No data available for this student.")
+            return
+        
+        # Calculate statistics
+        gpa = calculate_gpa(username)
+        grade_stats = get_grade_statistics(username)
+        eca_summary = get_eca_summary(username)
+        
+        # Display statistics
+        stats_text = f"""Student: {username}
+
+GPA: {gpa if gpa else 'N/A'}
+
+Grade Statistics:
+"""
+        if grade_stats:
+            stats_text += f"""Mean: {grade_stats['mean']}
+Median: {grade_stats['median']}
+Min: {grade_stats['min']}
+Max: {grade_stats['max']}
+Standard Deviation: {grade_stats['std_dev']}
+
+"""
+        
+        if eca_summary:
+            stats_text += f"""ECA Summary:
+Total Activities: {eca_summary['total_activities']}
+Total Hours per Week: {eca_summary['total_hours']}
+"""
+        
+        self.stats_display.insert(tk.END, stats_text)
+        
+        # Create and display charts
+        if grades and eca:
+            chart_path = create_performance_summary(grades, eca)
+        elif grades:
+            chart_path = create_grades_chart(grades)
+        elif eca:
+            chart_path = create_eca_chart(eca)
+        else:
+            return
+        
+        self._display_chart(self.chart_canvas, chart_path)
+    
+    def _refresh_overall_stats(self):
+        """Refresh the overall statistics and charts"""
+        # Get statistics
+        stats = get_overall_statistics()
+        if not stats:
+            self.overall_stats_display.delete('1.0', tk.END)
+            self.overall_stats_display.insert(tk.END, "No data available.")
+            return
+        
+        # Display statistics
+        stats_text = f"""Overall Statistics:
+
+Total Students: {stats['total_students']}
+Total Grades: {stats['total_grades']}
+Total ECAs: {stats['total_ecas']}
+
+Grade Statistics:
+Average Grade: {stats['average_grade']:.2f}
+Median Grade: {stats['median_grade']:.2f}
+Standard Deviation: {stats['grade_std_dev']:.2f}
+
+ECA Statistics:
+Average Hours per Week: {stats['average_hours']:.2f}
+Total Hours: {stats['total_hours']:.2f}
+Unique Activities: {stats['unique_activities']}
+Unique Subjects: {stats['unique_subjects']}
+"""
+        self.overall_stats_display.delete('1.0', tk.END)
+        self.overall_stats_display.insert(tk.END, stats_text)
+        
+        # Create and display charts
+        self._display_chart(self.grades_chart, create_overall_grades_distribution())
+        self._display_chart(self.subjects_chart, create_subject_performance_comparison())
+        self._display_chart(self.eca_chart, create_eca_distribution())
+        self._display_chart(self.hours_chart, create_hours_distribution())
+    
+    def _display_chart(self, canvas, chart_path):
+        """Display a chart in the given canvas"""
+        if not chart_path or not os.path.exists(chart_path):
+            return
+        
+        # Load and display the chart
+        image = Image.open(chart_path)
+        image = image.resize((600, 400), Image.Resampling.LANCZOS)
+        photo = ImageTk.PhotoImage(image)
+        
+        # Update canvas
+        canvas.delete("all")
+        canvas.create_image(0, 0, anchor='nw', image=photo)
+        canvas.image = photo  # Keep a reference
+    
+    # Action handlers
+    def _handle_logout(self):
+        """Handle the logout action"""
+        if messagebox.askyesno("Logout", "Are you sure you want to logout?"):
+            if isinstance(self.root, tk.Toplevel):
+                self.root.master.destroy()
+            else:
+                self.root.destroy()
+    
+    def _view_user_details(self):
+        """View details of the selected user"""
+        selected = self.users_list.selection()
+        if not selected:
+            messagebox.showwarning("Warning", "Please select a user to view")
+            return
+        
+        username = self.users_list.item(selected[0])['values'][0]
+        user = get_user_details(username)
+        
+        if user:
+            details = f"""
+            Username: {user['username']}
+            Full Name: {user['full_name']}
+            Role: {user['role']}
+            Email: {user.get('email', 'Not set')}
+            Phone: {user.get('phone', 'Not set')}
+            Address: {user.get('address', 'Not set')}
+            Department: {user.get('department', 'Not set')}
+            Level: {user.get('level', 'Not set')}
+            """
+            messagebox.showinfo("User Details", details)
+        else:
+            messagebox.showerror("Error", "Failed to get user details")
+    
+    def _remove_user(self):
+        """Remove the selected user"""
+        selected = self.users_list.selection()
+        if not selected:
+            messagebox.showwarning("Warning", "Please select a user to remove")
+            return
+        
+        username = self.users_list.item(selected[0])['values'][0]
+        if messagebox.askyesno("Confirm", f"Are you sure you want to remove user '{username}'?"):
+            if remove_user(username):
+                messagebox.showinfo("Success", "User removed successfully")
+                self._load_users()
+            else:
+                messagebox.showerror("Error", "Failed to remove user")
+    
+    def _add_user(self):
+        """Add a new user"""
+        # Collect form data
+        data = {field: var.get() for field, var in self.user_form_vars.items()}
+        
+        # Validate required fields
+        if not all([data['username'], data['full_name'], data['password'], data['role']]):
+            messagebox.showwarning("Warning", "Username, full name, password, and role are required")
+            return
+        
+        # Add user
+        if add_user(
+            data['username'],
+            data['full_name'],
+            data['password'],
+            data['role'],
+            data['email'],
+            data['phone'],
+            data['address'],
+            data['department'],
+            data['level']
+        ):
+            messagebox.showinfo("Success", "User added successfully")
+            # Clear form
+            for var in self.user_form_vars.values():
+                var.set('')
+            # Refresh users list
+            self._load_users()
+        else:
+            messagebox.showerror("Error", "Failed to add user")
+    
+    def _add_grade(self):
+        """Add a new grade"""
+        # Collect form data
+        data = {field: var.get() for field, var in self.grade_form_vars.items()}
+        
+        # Validate required fields
+        if not all([data['username'], data['subject'], data['grade']]):
+            messagebox.showwarning("Warning", "All fields are required")
+            return
+        
+        # Validate grade is numeric and between 0-100
+        try:
+            grade = float(data['grade'])
+            if not (0 <= grade <= 100):
+                messagebox.showwarning("Warning", "Grade must be between 0 and 100")
+                return
+        except ValueError:
+            messagebox.showwarning("Warning", "Grade must be a number")
+            return
+        
+        # Add grade
+        if add_student_grade(data['username'], data['subject'], grade):
+            messagebox.showinfo("Success", f"Grade {grade} added successfully for {data['username']} in {data['subject']}")
+            # Clear form
+            for var in self.grade_form_vars.values():
+                var.set('')
+        else:
+            messagebox.showerror("Error", "Failed to add grade. Please check if the student exists and all data is valid.")
+    
+    def _add_eca(self):
+        """Add a new ECA"""
+        # Collect form data
+        data = {field: var.get() for field, var in self.eca_form_vars.items()}
+        
+        # Validate required fields
+        if not all([data['username'], data['activity'], data['role'], data['hours_per_week']]):
+            messagebox.showwarning("Warning", "Username, activity, role, and hours are required")
+            return
+        
+        # Validate hours is numeric and positive
+        try:
+            hours = float(data['hours_per_week'])
+            if hours < 0:
+                messagebox.showwarning("Warning", "Hours per week must be positive")
+                return
+        except ValueError:
+            messagebox.showwarning("Warning", "Hours per week must be a number")
+            return
+        
+        # Add ECA
+        if add_student_eca(
+            data['username'],
+            data['activity'],
+            data['role'],
+            data['hours_per_week'],
+            data.get('description', '')
+        ):
+            messagebox.showinfo("Success", f"ECA '{data['activity']}' added successfully for {data['username']}")
+            # Clear form
+            for var in self.eca_form_vars.values():
+                var.set('')
+        else:
+            messagebox.showerror("Error", "Failed to add ECA. Please check if the student exists and all data is valid.")

@@ -1,19 +1,5 @@
-username,activity,role,hours_per_week,start_date,end_date,description
-student1,Football,Team Captain,6,2023-09-01,2024-05-31,Leading the university football team
-student1,Debate Club,Member,3,2023-09-01,2024-05-31,Participating in weekly debates
-student1,Chess Club,Member,2,2023-09-01,2024-05-31,Regular chess practice and tournaments
-student2,Badminton,Team Member,4,2023-09-01,2024-05-31,University badminton team player
-student2,Debate Club,Secretary,3,2023-09-01,2024-05-31,Managing club activities and events
-student2,Chess Club,Member,2,2023-09-01,2024-05-31,Regular chess practice and tournaments
-student3,Football,Team Member,5,2023-09-01,2024-05-31,University football team player
-student3,Debate Club,Member,3,2023-09-01,2024-05-31,Participating in weekly debates
-student3,Chess Club,Member,2,2023-09-01,2024-05-31,Regular chess practice and tournaments
-student4,Badminton,Debate Club,Chess Club,,,
-student5,Football,Debate Club,Chess Club,,,
-student6,Badminton,Debate Club,Chess Club,,,
-student7,Football,Debate Club,Chess Club,,,
-student8,Badminton,Debate Club,Chess Club,,,
-student9,Football,Debate Club,Chess Club,,,
-student10,Badminton,Debate Club,Chess Club  ,,,
-123,Sports,Basketball Player,4,2023-09-01,2024-05-31,University basketball team member
-123,Chess Club,Member,2,2023-09-01,2024-05-31,Regular chess practice and tournaments
+username,activity,role,hours_per_week,description
+student1,Football,Team Captain,6.0,Leading the university football team
+snirajan,chess,leader,34.0,he is goat
+snirajan,Basketball,Point Guard,56.0,He is bad
+snirajan,Badminton,leader,31.0,Plays just good

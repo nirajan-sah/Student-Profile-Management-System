@@ -1,17 +1,9 @@
-username,subject,grade,credits,semester,year,grade_date
-student1,Mathematics,85.0,3.0,Fall,2023.0,2023-12-15
-student1,Physics,90.0,4.0,Fall,2023.0,2023-12-15
-student1,Computer Science,78.0,3.0,Fall,2023.0,2023-12-15
-student1,English,88.0,3.0,Fall,2023.0,2023-12-15
-student1,History,92.0,3.0,Fall,2023.0,2023-12-15
-student2,Mathematics,75.0,3.0,Fall,2023.0,2023-12-15
-student2,Physics,80.0,4.0,Fall,2023.0,2023-12-15
-student2,Computer Science,82.0,3.0,Fall,2023.0,2023-12-15
-student2,English,78.0,3.0,Fall,2023.0,2023-12-15
-student2,History,85.0,3.0,Fall,2023.0,2023-12-15
-student3,Mathematics,92.0,3.0,Fall,2023.0,2023-12-15
-student3,Physics,88.0,4.0,Fall,2023.0,2023-12-15
-student3,Computer Science,90.0,3.0,Fall,2023.0,2023-12-15
-student3,English,85.0,3.0,Fall,2023.0,2023-12-15
-student3,History,88.0,3.0,Fall,2023.0,2023-12-15
-
+username,subject,grade
+student1,Mathematics,85.0
+student1,Physics,90.0
+student1,Computer Science,78.0
+student1,English,88.0
+snirajan,Physics,100.0
+snirajan,Mathematics,45.0
+snirajan,English,100.0
+snirajan,Chemistry,89.0
