@@ -1,0 +1,7 @@
+username,full_name,role,email,phone,address,department,level
+admin,Admin User,admin,admin@university.edu,1234567890,123 Admin St,Administration,0.0
+student1,Sudan Pudasaini,student,sudan@university.edu,9876543210,456 Student Ave,Computer Science,0.0
+user2,Nirajan Sah,student,snirajan24@tbc.edu.np,9746597468,Nakhipot,Computer Science,4.0
+snirajan,Nirajan Sah,admin,Nirajan@uwe.uk,9746597468,Nakhipot,Administrator,0.0
+student4,Nirajan Sah,student,nirajansah@gmail.com,9746597468,nakhipot,science,
+snirajan12,Nirajan,student,nriaja@gmail.com,9746597468,nakhipot,computer science,3.0

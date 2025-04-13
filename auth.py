@@ -1,163 +1,151 @@
 import os
-
-
-class User:
-    def __init__(self, username, full_name, role):
-        self.username = username
-        self.full_name = full_name
-        self.role = role
+import pandas as pd
 
 
 def authenticate(username, password):
-    """
-    Authenticate the user by checking the credentials in passwords.txt.
-    Returns the role (admin or student) if valid, otherwise None.
-    """
+    """Authenticate user credentials"""
     try:
-        with open("data/passwords.txt", "r") as file:  # Use forward slashes for compatibility
-            for line in file:
-                stored_username, stored_password, role = line.strip().split(",")
-                if username == stored_username and password == stored_password:
-                    return role  # Return the role (admin or student)
-    except FileNotFoundError:
-        print("Error: passwords.txt file not found.")
+            
+        if not os.path.exists("data/passwords.csv"):
+            print("Error: passwords.csv file not found")
+            return None
+            
+        if not os.path.exists("data/users.csv"):
+            print("Error: users.csv file not found")
+            return None
+            
+        # Read passwords file
+        passwords_df = pd.read_csv("data/passwords.csv")
+        if passwords_df.empty:
+            print("Error: passwords.csv is empty")
+            return None
+            
+        # Read users file
+        users_df = pd.read_csv("data/users.csv")
+        if users_df.empty:
+            print("Error: users.csv is empty")
+            return None
+            
+        # Find user in passwords file
+        user = passwords_df[
+            (passwords_df['username'] == username) & 
+            (passwords_df['password'] == password)
+        ]
+        
+        if user.empty:
+            print("Invalid username or password")
+            return None
+            
+        # Get user role
+        role = user.iloc[0]['role']
+        if not role or role not in ['admin', 'student']:
+            print("Invalid user role")
+            return None
+            
+        # Verify user exists in users.csv
+        if username not in users_df['username'].values:
+            print("User not found in users.csv")
+            return None
+            
+        return {
+            'username': username,
+            'role': role
+        }
+        
     except Exception as e:
-        print(f"Error: {e}")
-    return None
+        print(f"Authentication error: {str(e)}")
+        return None
 
 
 def get_user_details(username):
-    """
-    Fetch user details from users.txt based on the username.
-    Returns a User object if found, otherwise None.
-    """
+    """Fetch user details from users.csv based on the username."""
+    if not username:
+        return None
+        
     try:
-        with open("data/users.txt", "r") as file:  # Use forward slashes for compatibility
-            for line in file:
-                stored_username, full_name, role = line.strip().split(",")
-                if username == stored_username:
-                    return User(username, full_name, role)
-    except FileNotFoundError:
-        print("Error: users.txt file not found.")
+        if not os.path.exists("data"):
+            os.makedirs("data")
+            
+        if not os.path.exists("data/users.csv"):
+            print("Error: users.csv file not found.")
+            return None
+            
+        df = pd.read_csv("data/users.csv")
+        user_row = df[df['username'] == username]
+        
+        if not user_row.empty:
+            return {
+                'username': user_row.iloc[0]['username'],
+                'full_name': user_row.iloc[0]['full_name'],
+                'role': user_row.iloc[0]['role'],
+                'email': user_row.iloc[0].get('email', ''),
+                'phone': user_row.iloc[0].get('phone', ''),
+                'address': user_row.iloc[0].get('address', ''),
+                'department': user_row.iloc[0].get('department', ''),
+                'year_of_study': user_row.iloc[0].get('year_of_study', '')
+            }
+            
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"Error getting user details: {e}")
     return None
 
 
-def add_user(username, full_name, password, role):
-    """
-    Add a new user to users.txt and passwords.txt.
-    """
+def initialize_data_files():
+    """Initialize data directory and required CSV files"""
     try:
-        # Check if the username already exists
-        with open("data/users.txt", "r") as file:
-            for line in file:
-                stored_username, _, _ = line.strip().split(",")
-                if username == stored_username:
-                    return False  # Username already exists
-
-        # Add the user to users.txt
-        with open("data/users.txt", "a") as file:
-            file.write(f"{username},{full_name},{role}\n")
-
-        # Add the user to passwords.txt
-        with open("data/passwords.txt", "a") as file:
-            file.write(f"{username},{password},{role}\n")
-
-        return True
+        if not os.path.exists("data"):
+            os.makedirs("data")
+            
+        # Initialize users.csv
+        if not os.path.exists("data/users.csv"):
+            pd.DataFrame(columns=['username', 'full_name', 'role', 'email', 'phone', 'address', 
+                                'department', 'year_of_study', 'enrollment_date']).to_csv("data/users.csv", index=False)
+            
+        # Initialize passwords.csv
+        if not os.path.exists("data/passwords.csv"):
+            pd.DataFrame(columns=['username', 'password', 'role']).to_csv("data/passwords.csv", index=False)
+            
+        # Initialize grades.csv
+        if not os.path.exists("data/grades.csv"):
+            pd.DataFrame(columns=['username', 'subject', 'grade']).to_csv("data/grades.csv", index=False)
+            
+        # Initialize eca.csv
+        if not os.path.exists("data/eca.csv"):
+            pd.DataFrame(columns=['username', 'activity', 'role', 'hours']).to_csv("data/eca.csv", index=False)
+            
+        # Add default admin user if not exists
+        passwords_df = pd.read_csv("data/passwords.csv")
+        users_df = pd.read_csv("data/users.csv")
+        
+        if 'admin' not in passwords_df['username'].values:
+            # Add admin to passwords.csv
+            new_password = pd.DataFrame({
+                'username': ['admin'],
+                'password': ['password'],
+                'role': ['admin']
+            })
+            passwords_df = pd.concat([passwords_df, new_password], ignore_index=True)
+            passwords_df.to_csv("data/passwords.csv", index=False)
+            
+            # Add admin to users.csv
+            new_user = pd.DataFrame({
+                'username': ['admin'],
+                'full_name': ['Administrator'],
+                'role': ['admin'],
+                'email': ['admin@example.com'],
+                'phone': [''],
+                'address': [''],
+                'department': [''],
+                'year_of_study': [''],
+                'enrollment_date': [pd.Timestamp.now().strftime('%Y-%m-%d')]
+            })
+            users_df = pd.concat([users_df, new_user], ignore_index=True)
+            users_df.to_csv("data/users.csv", index=False)
+            
     except Exception as e:
-        print(f"Error: {e}")
-        return False
+        print(f"Error initializing data files: {str(e)}")
 
 
-def delete_user(username):
-    """
-    Delete a user from users.txt and passwords.txt.
-    """
-    try:
-        # Remove the user from users.txt
-        with open("data/users.txt", "r") as file:
-            lines = file.readlines()
-        with open("data/users.txt", "w") as file:
-            for line in lines:
-                if not line.startswith(username + ","):
-                    file.write(line)
-
-        # Remove the user from passwords.txt
-        with open("data/passwords.txt", "r") as file:
-            lines = file.readlines()
-        with open("data/passwords.txt", "w") as file:
-            for line in lines:
-                if not line.startswith(username + ","):
-                    file.write(line)
-
-        return True
-    except Exception as e:
-        print(f"Error: {e}")
-        return False
-
-'''
-enter and update grades for student
-3 in one class
-'''
-
-def get_student_grades(username):
-    """
-    Fetch grades for a student from grades.txt.
-    Returns a dictionary of subjects and grades if found, otherwise None.
-    """
-    try:
-        with open("data/grades.txt", "r") as file:
-            for line in file:
-                stored_username, *grades = line.strip().split(",")
-                if username == stored_username:
-                    return grades  # Return the grades as a list
-    except FileNotFoundError:
-        print("Error: grades.txt file not found.")
-    except Exception as e:
-        print(f"Error: {e}")
-    return None
-
-'''
-enter and update eca for student
-3 in one
-'''
-
-def get_student_eca(username):
-    """
-    Fetch extracurricular activities for a student from eca.txt.
-    Returns a list of activities if found, otherwise None.
-    """
-    try:
-        with open("data/eca.txt", "r") as file:
-            for line in file:
-                stored_username, *activities = line.strip().split(",")
-                if username == stored_username:
-                    return activities  # Return the activities as a list
-    except FileNotFoundError:
-        print("Error: eca.txt file not found.")
-    except Exception as e:
-        print(f"Error: {e}")
-    return None
-
-
-def update_student_profile(username, full_name):
-    """
-    Update the student's profile information in users.txt.
-    """
-    try:
-        updated = False
-        with open("data/users.txt", "r") as file:
-            lines = file.readlines()
-        with open("data/users.txt", "w") as file:
-            for line in lines:
-                stored_username, _, role = line.strip().split(",")
-                if username == stored_username:
-                    file.write(f"{username},{full_name},{role}\n")
-                    updated = True
-                else:
-                    file.write(line)
-        return updated
-    except Exception as e:
-        print(f"Error: {e}")
-        return False
+if __name__ == "__main__":
+    initialize_data_files()
+    print("Data files initialized successfully!")
