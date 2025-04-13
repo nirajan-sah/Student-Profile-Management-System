@@ -1,7 +1,7 @@
 import pandas as pd
 import os
 import csv
-from datetime import datetime
+
 
 def add_user(username, full_name, password, role, email=None, phone=None, address=None, department=None, level=None):
     """Add a new user to the system"""
@@ -12,16 +12,14 @@ def add_user(username, full_name, password, role, email=None, phone=None, addres
         
         if role not in ['admin', 'student']:
             return False, "Role must be either 'admin' or 'student'"
-        
-        # Create data directory if it doesn't exist
-        if not os.path.exists("data"):
-            os.makedirs("data")
+
         
         # Check if username already exists
         if os.path.exists("data/passwords.csv"):
             passwords_df = pd.read_csv("data/passwords.csv")
             if username in passwords_df['username'].values:
-                return False, "Username already exists"
+                print("Username already exists")
+                return False
         
         # Add user to passwords.csv
         if not os.path.exists("data/passwords.csv"):
@@ -37,13 +35,14 @@ def add_user(username, full_name, password, role, email=None, phone=None, addres
         if not os.path.exists("data/users.csv"):
             with open("data/users.csv", 'w', newline='') as f:
                 writer = csv.writer(f)
-                writer.writerow(['username', 'full_name', 'email', 'phone', 'address', 'department', 'level', 'created_at'])
+                writer.writerow(['username', 'full_name', 'email', 'phone', 'address', 'department', 'level'])
         
         with open("data/users.csv", 'a', newline='') as f:
             writer = csv.writer(f)
-            writer.writerow([username, full_name, email, phone, address, department, level, datetime.now()])
+            writer.writerow([username, full_name, email, phone, address, department, level])
         
-        return True, "User added successfully"
+        print("User added successfully")
+        return True
     except Exception as e:
         return False, f"Error adding user: {str(e)}"
 

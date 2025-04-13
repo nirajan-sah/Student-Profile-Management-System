@@ -584,7 +584,7 @@ Unique Subjects: {stats['unique_subjects']}
             # Refresh users list
             self._load_users()
         else:
-            messagebox.showerror("Error", "Failed to add user")
+            messagebox.showerror("Error", "User already exist")
     
     def _add_grade(self):
         """Add a new grade"""
