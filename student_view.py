@@ -268,7 +268,7 @@ Total Hours per Week: {eca_summary['total_hours']}
         try:
             # Load and resize the chart
             image = Image.open(chart_path)
-            image = image.resize((400, 400), Image.Resampling.LANCZOS)
+            image = image.resize((700, 600), Image.Resampling.LANCZOS)
             photo = ImageTk.PhotoImage(image)
             
             # Update canvas
