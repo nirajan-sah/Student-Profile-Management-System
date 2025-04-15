@@ -6,16 +6,13 @@ import os
 def get_student_profile(username):
     """Get student profile information"""
     try:
-        if not os.path.exists('data'):
-            os.makedirs('data')
-            
         if not os.path.exists('data/users.csv'):
-            print("Error: users.csv file not found")
+            print("Error: File not found")
             return None
             
         users_df = pd.read_csv('data/users.csv')
         if users_df.empty:
-            print("Error: users.csv is empty")
+            print("Error: File is empty")
             return None
             
         student = users_df[users_df['username'] == username]
@@ -41,19 +38,16 @@ def get_student_grades(username):
     if not username:
         return None
         
-    try:
-        if not os.path.exists("data"):
-            os.makedirs("data")
-            
+    try:            
         if not os.path.exists("data/grades.csv"):
-            print("Error: grades.csv file not found.")
+            print("Error: File not found.")
             return None
             
         df = pd.read_csv("data/grades.csv")
         
         # Check if the student exists in the grades file
         if username not in df['username'].values:
-            print(f"Student with username '{username}' not found in grades.csv")
+            print(f"Student with username '{username}' not found in file")
             return []
             
         # Get the student's row
@@ -98,53 +92,6 @@ def get_student_eca(username):
             
     except Exception as e:
         print(f"Error getting student ECA: {e}")
-        return None
-
-def get_student_statistics(username):
-    """Calculate student statistics using NumPy"""
-    try:
-        grades = get_student_grades(username)
-        if not grades:
-            return None
-            
-        # Convert grades to numpy array for statistical calculations
-        grade_values = np.array([float(grade['grade']) for grade in grades])
-        
-        stats = {
-            'mean': np.mean(grade_values),
-            'median': np.median(grade_values),
-            'std_dev': np.std(grade_values),
-            'min': np.min(grade_values),
-            'max': np.max(grade_values)
-        }
-        
-        return stats
-    except Exception as e:
-        print(f"Error calculating statistics: {str(e)}")
-        return None
-
-def get_student_progress(username):
-    """Calculate student progress using NumPy"""
-    try:
-        profile = get_student_profile(username)
-        if not profile:
-            return None
-            
-        # Calculate progress based on completed credits
-        total_credits = 120  # Assuming 120 credits for graduation
-        grades = get_student_grades(username)
-        completed_credits = len(grades) * 3  # 3 credits per course
-        
-        progress = {
-            'completed_credits': completed_credits,
-            'total_credits': total_credits,
-            'completion_percentage': (completed_credits / total_credits) * 100,
-            'remaining_credits': total_credits - completed_credits
-        }
-        
-        return progress
-    except Exception as e:
-        print(f"Error calculating progress: {str(e)}")
         return None
 
 def update_student_profile(username, data):

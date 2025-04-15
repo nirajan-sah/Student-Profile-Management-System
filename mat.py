@@ -33,7 +33,6 @@ class StudentAnalytics:
         except Exception as e:
             print(f"Error cleaning up charts: {e}")
     
-    
     def create_grades_chart(self, grades, username):
         """Create a bar chart for student grades"""
         try:
@@ -271,40 +270,6 @@ class StudentAnalytics:
             
         except Exception as e:
             print(f"Error getting ECA summary: {e}")
-            return None
-
-    def get_progress_towards_graduation(self, username):
-        """Calculate student's progress towards graduation"""
-        try:
-            if not os.path.exists(os.path.join(self.data_dir, "grades.csv")):
-                return None
-                
-            grades_df = pd.read_csv(os.path.join(self.data_dir, "grades.csv"))
-            
-            if username not in grades_df['username'].values:
-                return None
-                
-            student_row = grades_df[grades_df['username'] == username].iloc[0]
-            completed_subjects = 0
-            
-            for column in grades_df.columns:
-                if column != 'username' and pd.notna(student_row[column]):
-                    completed_subjects += 1
-            
-            total_credits_needed = 120
-            completed_credits = completed_subjects * 3
-            
-            progress = {
-                'completed_credits': completed_credits,
-                'total_credits_needed': total_credits_needed,
-                'completion_percentage': round((completed_credits / total_credits_needed) * 100, 2),
-                'remaining_credits': total_credits_needed - completed_credits
-            }
-            
-            return progress
-            
-        except Exception as e:
-            print(f"Error calculating graduation progress: {e}")
             return None
 
     def create_overall_grades_distribution(self):

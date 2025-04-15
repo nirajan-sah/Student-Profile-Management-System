@@ -35,11 +35,11 @@ def add_user(username, full_name, password, role, email=None, phone=None, addres
         if not os.path.exists("data/users.csv"):
             with open("data/users.csv", 'w', newline='') as f:
                 writer = csv.writer(f)
-                writer.writerow(['username', 'full_name', 'email', 'phone', 'address', 'department', 'level'])
+                writer.writerow(['username', 'full_name', 'role', 'email', 'phone', 'address', 'department', 'level'])
         
         with open("data/users.csv", 'a', newline='') as f:
             writer = csv.writer(f)
-            writer.writerow([username, full_name, email, phone, address, department, level])
+            writer.writerow([username, full_name, role, email, phone, address, department, level])
         
         print("User added successfully")
         return True
