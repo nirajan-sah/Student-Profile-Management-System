@@ -4,6 +4,7 @@ from auth import authenticate
 from admin_view import AdminView
 from student_view import StudentView
 
+#Class for the user view
 class UserView:
     def __init__(self, parent=None):
         # Create main window
