@@ -62,10 +62,7 @@ def get_user_details(username):
     if not username:
         return None
         
-    try:
-        if not os.path.exists("data"):
-            os.makedirs("data")
-            
+    try:      
         if not os.path.exists("data/users.csv"):
             print("Error: users.csv file not found.")
             return None
@@ -82,7 +79,7 @@ def get_user_details(username):
                 'phone': user_row.iloc[0].get('phone', ''),
                 'address': user_row.iloc[0].get('address', ''),
                 'department': user_row.iloc[0].get('department', ''),
-                'year_of_study': user_row.iloc[0].get('year_of_study', '')
+                'level': user_row.iloc[0].get('level', '')
             }
             
     except Exception as e:
@@ -97,9 +94,10 @@ def initialize_data_files():
             os.makedirs("data")
             
         # Initialize users.csv
+        #With indext = False there is no index column in the csv file
         if not os.path.exists("data/users.csv"):
             pd.DataFrame(columns=['username', 'full_name', 'role', 'email', 'phone', 'address', 
-                                'department', 'year_of_study', 'enrollment_date']).to_csv("data/users.csv", index=False)
+                                'department', 'level']).to_csv("data/users.csv", index=False)
             
         # Initialize passwords.csv
         if not os.path.exists("data/passwords.csv"):
@@ -107,11 +105,11 @@ def initialize_data_files():
             
         # Initialize grades.csv
         if not os.path.exists("data/grades.csv"):
-            pd.DataFrame(columns=['username', 'subject', 'grade']).to_csv("data/grades.csv", index=False)
+            pd.DataFrame(columns=['username', 'Physics', 'Math', 'Chemistry', 'Biology', 'English']).to_csv("data/grades.csv", index=False)
             
         # Initialize eca.csv
         if not os.path.exists("data/eca.csv"):
-            pd.DataFrame(columns=['username', 'activity', 'role', 'hours']).to_csv("data/eca.csv", index=False)
+            pd.DataFrame(columns=['username', 'activity', 'role', 'hours_per_week', 'description']).to_csv("data/eca.csv", index=False)
             
         # Add default admin user if not exists
         passwords_df = pd.read_csv("data/passwords.csv")
@@ -136,8 +134,7 @@ def initialize_data_files():
                 'phone': [''],
                 'address': [''],
                 'department': [''],
-                'year_of_study': [''],
-                'enrollment_date': [pd.Timestamp.now().strftime('%Y-%m-%d')]
+                'level': ['']
             })
             users_df = pd.concat([users_df, new_user], ignore_index=True)
             users_df.to_csv("data/users.csv", index=False)

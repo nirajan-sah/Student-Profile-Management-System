@@ -205,8 +205,6 @@ class StudentView:
             
     def load_analytics(self):
         """Load and display analytics data"""
-        # Clear previous data
-        self.stats_display.delete('1.0', tk.END)
         
         # Get data
         grades = get_student_grades(self.username)
