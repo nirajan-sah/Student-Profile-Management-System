@@ -46,9 +46,27 @@ class AdminView:
     
     def _create_interface(self):
         """Create the main interface with all tabs"""
+        # Create header frame for logout button
+        header_frame = ttk.Frame(self.root)
+        header_frame.pack(fill='x', padx=10, pady=(5, 0))
+        
+        # Add logout button to header
+        logout_btn = ttk.Button(
+            header_frame, 
+            text="Logout", 
+            command=self._handle_logout,
+            style='Accent.TButton',
+            width=15
+        )
+        logout_btn.pack(side='right', padx=5, pady=5)
+        
+        # Create main container for tabs
+        main_container = ttk.Frame(self.root)
+        main_container.pack(expand=True, fill='both', padx=10, pady=10)
+        
         # Create the tab container
-        tab_container = ttk.Notebook(self.root)
-        tab_container.pack(expand=True, fill='both', padx=10, pady=10)
+        tab_container = ttk.Notebook(main_container)
+        tab_container.pack(expand=True, fill='both')
         
         # Create each tab
         self._create_users_tab(tab_container)
@@ -58,9 +76,11 @@ class AdminView:
         self._create_student_stats_tab(tab_container)
         self._create_overall_stats_tab(tab_container)
         
-        # Add logout button
-        logout_btn = ttk.Button(self.root, text="Logout", command=self._handle_logout)
-        logout_btn.pack(pady=10)
+        # Create and configure the accent style for the logout button
+        style = ttk.Style()
+        style.configure('Accent.TButton', 
+                       font=('Helvetica', 11, 'bold'),
+                       padding=5)
     
     def _create_users_tab(self, parent):
         """Create the Users Management tab"""
@@ -290,7 +310,7 @@ class AdminView:
         # Add chart display
         chart_frame = ttk.LabelFrame(right_panel, text="Charts", padding="10")
         chart_frame.pack(fill='both', expand=True, pady=5)
-        self.chart_canvas = tk.Canvas(chart_frame, width=600, height=400)
+        self.chart_canvas = tk.Canvas(chart_frame, width=750, height=600)
         self.chart_canvas.pack(fill='both', expand=True)
         
         # Load initial data
@@ -347,7 +367,7 @@ class AdminView:
         parent.add(tab, text=title)
         
         # Create canvas for chart
-        canvas = tk.Canvas(tab, width=600, height=400)
+        canvas = tk.Canvas(tab, width=750, height=600)
         canvas.pack(fill='both', expand=True)
         
         # Store canvas reference
@@ -494,7 +514,7 @@ Unique Subjects: {stats['unique_subjects']}
         try:
             # Load and display the chart
             image = Image.open(chart_path)
-            image = image.resize((600, 400), Image.Resampling.LANCZOS)
+            image = image.resize((750, 600), Image.Resampling.LANCZOS)
             photo = ImageTk.PhotoImage(image)
             
             # Update canvas
@@ -507,13 +527,13 @@ Unique Subjects: {stats['unique_subjects']}
             canvas.delete("all")  # Clear canvas on error
     
     # Action handlers
+            
     def _handle_logout(self):
-        """Handle the logout action"""
         if messagebox.askyesno("Logout", "Are you sure you want to logout?"):
             if isinstance(self.root, tk.Toplevel):
-                self.root.master.destroy()
+                self.root.master.destroy()  # Close the entire application
             else:
-                self.root.destroy()
+                self.root.destroy()  # Close just this window
     
     def _view_user_details(self):
         """View details of the selected user"""
